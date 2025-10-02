@@ -86,7 +86,14 @@ export const solve = (input: string): string => {
     }
   }
 
-  // TODO 「全体不可」のときは価格を出さず、NG行の理由だけを出力する
+  if (anyNg) {
+    return evaluated
+      .filter((e) => !e.ok)
+      .map((e) => e.text)
+      .join('\n');
+  }
+
+  return evaluated.map((e) => e.text).join('\n');
 
   return evaluated.map((e) => e.text).join('\n');
 };
@@ -118,6 +125,12 @@ const parseLine = (line: string): Ticket | null => {
   const durM = parseInt(dur[2], 10);
   const row = seat[1].toUpperCase();
   const col = parseInt(seat[2], 10);
+
+  if (startHH < 0 || startHH > 23) return null;
+  if (startMM < 0 || startMM > 59) return null;
+  if (durH < 0) return null;
+  if (durM < 0 || durM > 59) return null;
+  if (col < 1 || col > 24) return null;
 
   return {
     age: ageRaw as Age,
@@ -195,7 +208,8 @@ const checkTimeRule = (
  */
 const orderReasons = (reasons: string[]): string[] => {
   // TODO ここを実装
-  return reasons;
+  const order = [MSG.NEED_ADULT, MSG.AGE_LIMIT, MSG.SEAT_LIMIT];
+  return order.filter((msg) => reasons.includes(msg));
 };
 
 // 重複排除（stable）
