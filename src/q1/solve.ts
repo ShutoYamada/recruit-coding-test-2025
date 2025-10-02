@@ -148,7 +148,9 @@ const checkRating = (
   rating: Rating,
   hasAdultInSet: boolean
 ): boolean => {
-  // TODO ここを実装
+  if ( rating === 'R18+' && age !== 'Adult') return false;
+  if ( rating === 'PG-12' && age === 'Child' && hasAdultInSet === false) return false;
+  // TODO ここを実装 //done
   return true;
 };
 
@@ -182,17 +184,26 @@ const checkTimeRule = (
  * 理由の順序を安定化（README: 「同伴 → 年齢 → 座席」）
  */
 const orderReasons = (reasons: string[]): string[] => {
-  // TODO ここを実装
+  // TODO ここを実装 // done
   reasons.sort((a, b) => {
-    if (a === MSG.NEED_ADULT && b === MSG.AGE_LIMIT) return -1;
-    if (a === MSG.NEED_ADULT && b === MSG.SEAT_LIMIT) return -1;
-    if (a === MSG.AGE_LIMIT && b === MSG.NEED_ADULT) return 1;
-    if (a === MSG.AGE_LIMIT && b === MSG.SEAT_LIMIT) return -1;
-    if (a === MSG.SEAT_LIMIT && b === MSG.NEED_ADULT) return 1;
-    if (a === MSG.SEAT_LIMIT && b === MSG.AGE_LIMIT) return 1;
-    return 0;
+    let x, y;
+    // convert each reason string into a numeric rank
+    x = convertReasonToNumber(a);
+    y = convertReasonToNumber(b);
+    return x-y;
+    // negative → a comes before b
+    // positive → a comes after b
+    // zero     → do nothing
   });
   return reasons;
+};
+const convertReasonToNumber = (reason: string) =>
+{
+  let number = 0;
+    if (reason === MSG.NEED_ADULT) number = 0;
+    if (reason === MSG.AGE_LIMIT) number = 1;
+    if (reason === MSG.SEAT_LIMIT) number = 2;
+  return number;
 };
 
 // 重複排除（stable）
