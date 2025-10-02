@@ -149,14 +149,14 @@ const checkRating = (
   hasAdultInSet: boolean
 ): boolean => {
 
-  if( rating === 'G') return true;
-  if( rating === 'PG-12'){
-    if(age === 'Child' && !hasAdultInSet) return false;
-    return true;
+  if (rating === 'G') return true; // 全年齢OK
+  if (rating === 'PG-12') {
+    if (age === 'Child' && !hasAdultInSet) return false; // 子供だけはNG
+    return true; // 大人 or 同伴ありはOK
   }
-  if( rating === 'R18+'){
-    if(age !== 'Adult') return false;
-    return true;
+  if (rating === 'R18+') {
+    if (age !== 'Adult') return false; // 大人以外NG
+    return true; // 大人のみOK
   }
 
   return true;
