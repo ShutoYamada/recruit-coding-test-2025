@@ -93,7 +93,7 @@ export const solve = (input: string): string => {
 
 /**
  * 簡易パーサ（最小限の検証のみ）
- * TODO:
+ * TODO: //done
  *  - startHH/startMM/durH/durM の範囲チェック（例: 23:59, 分は 0-59）
  *  - 座席の列番号 1-24 の範囲チェック
  *  - その他フォーマットの揺れ（必要なら）
@@ -118,6 +118,12 @@ const parseLine = (line: string): Ticket | null => {
   const durM = parseInt(dur[2], 10);
   const row = seat[1].toUpperCase();
   const col = parseInt(seat[2], 10);
+
+  if (startHH < 0 || startHH > 23) return null;
+  if (startMM < 0 || startMM > 59) return null;
+  if (durH < 0) return null;
+  if (durM < 0 || durM > 59) return null;
+  if (col < 1 || col > 24) return null;
 
   return {
     age: ageRaw as Age,
