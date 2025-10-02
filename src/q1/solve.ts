@@ -183,6 +183,15 @@ const checkTimeRule = (
  */
 const orderReasons = (reasons: string[]): string[] => {
   // TODO ここを実装
+  reasons.sort((a, b) => {
+    if (a === MSG.NEED_ADULT && b === MSG.AGE_LIMIT) return -1;
+    if (a === MSG.NEED_ADULT && b === MSG.SEAT_LIMIT) return -1;
+    if (a === MSG.AGE_LIMIT && b === MSG.NEED_ADULT) return 1;
+    if (a === MSG.AGE_LIMIT && b === MSG.SEAT_LIMIT) return -1;
+    if (a === MSG.SEAT_LIMIT && b === MSG.NEED_ADULT) return 1;
+    if (a === MSG.SEAT_LIMIT && b === MSG.AGE_LIMIT) return 1;
+    return 0;
+  });
   return reasons;
 };
 

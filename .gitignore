@@ -55,5 +55,6 @@ Thumbs.db
 *.pid
 *.pid.lock
 
+test.ts
 
 # Note: Do NOT ignore lockfiles intentionally. pnpm-lock.yaml should be committed when generated.
