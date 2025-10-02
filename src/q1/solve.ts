@@ -86,8 +86,12 @@ export const solve = (input: string): string => {
     }
   }
 
-  // TODO 「全体不可」のときは価格を出さず、NG行の理由だけを出力する
-
+  // TODO 「全体不可」のときは価格を出さず、NG行の理由だけを出力する //done
+  if (anyNg)
+  {
+  return evaluated
+    .filter((e) => !e.ok).map((e) => e.text).join('\n');
+  }
   return evaluated.map((e) => e.text).join('\n');
 };
 
@@ -185,15 +189,14 @@ const checkTimeRule = (
 ): boolean => {
   // TODO ここを実装 //done
   if (hasAdultInSet === true) return true;
-  let endHHNumber = endMinutes/60;
   if (hasAdultInSet === false && hasChildInSet === true)
   {
-    if (endHHNumber > 16) return false;
+    if (endMinutes > 16*60) return false;
     else return true;
   }
   if (hasAdultInSet === false && hasChildInSet === false)
   {
-    if (endHHNumber > 18) return false;
+    if (endMinutes > 18*60) return false;
     else return true;
   }
   return true;
