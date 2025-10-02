@@ -31,7 +31,7 @@ describe('Q1 solve', () => {
   // ------------------------------
   // [C2] レーティング規則（年齢制限）
   // ------------------------------
-  it.skip('[C2] R18+ を Young/Child で購入不可 → 年齢制限', () => {
+  it('[C2] R18+ を Young/Child で購入不可 → 年齢制限', () => {
     const y = solve('Young,R18+,10:00,1:00,A-1');
     const c = solve('Child,R18+,10:00,1:00,I-2');
     expect(y).toBe('対象の映画は年齢制限により閲覧できません');
@@ -43,7 +43,7 @@ describe('Q1 solve', () => {
     expect(out).toBe('対象の映画は年齢制限により閲覧できません');
   });
 
-  it.skip('[C2] PG-12 を Adult + Child 同時購入 → 両方購入可', () => {
+  it('[C2] PG-12 を Adult + Child 同時購入 → 両方購入可', () => {
     const input = [
       'Adult,PG-12,10:00,1:00,A-1',
       'Child,PG-12,10:00,1:00,I-2',
