@@ -88,6 +88,13 @@ export const solve = (input: string): string => {
 
   // TODO 「全体不可」のときは価格を出さず、NG行の理由だけを出力する
 
+  if (anyNg) {
+    return evaluated
+      .filter((e) => !e.ok)
+      .map((e) => e.text)
+      .join('\n');
+  }
+
   return evaluated.map((e) => e.text).join('\n');
 };
 
@@ -119,6 +126,17 @@ const parseLine = (line: string): Ticket | null => {
   const row = seat[1].toUpperCase();
   const col = parseInt(seat[2], 10);
 
+  // 追加バリデーション
+  if (
+    !(startHH >= 0 && startHH <= 23) ||
+    !(startMM >= 0 && startMM <= 59) ||
+    !(durH >= 0) ||
+    !(durM >= 0 && durM <= 59) ||
+    !(col >= 1 && col <= 24)
+  ) {
+    return null;
+  }
+
   return {
     age: ageRaw as Age,
     rating: ratingRaw as Rating,
@@ -148,7 +166,13 @@ const checkRating = (
   rating: Rating,
   hasAdultInSet: boolean
 ): boolean => {
-  // TODO ここを実装
+  if (rating === 'G') return true;
+  if (rating === 'R18+') return age === 'Adult';
+  // PG-12
+  if (rating === 'PG-12') {
+    if (age === 'Child' && !hasAdultInSet) return false;
+    return true;
+  }
   return true;
 };
 
@@ -157,7 +181,10 @@ const checkRating = (
  *  - J〜L は Child 不可
  */
 const checkSeat = (t: Ticket): boolean => {
-  // TODO ここを実装
+  if (t.age === 'Child') {
+    const forbidden = new Set(['J', 'K', 'L']);
+    if (forbidden.has(t.row)) return false;
+  }
   return true;
 };
 
@@ -174,7 +201,23 @@ const checkTimeRule = (
   hasAdultInSet: boolean,
   hasChildInSet: boolean
 ): boolean => {
-  // TODO ここを実装
+  // Adult がいれば常にOK
+  if (hasAdultInSet) return true;
+
+  const LIMIT_CHILD = 16 * 60; // 960
+  const LIMIT_YOUNG = 18 * 60; // 1080
+
+  // Adult 0 かつ Child を含む場合、終了が16:00を超えると全員NG
+  if (hasChildInSet) {
+    return endMinutes <= LIMIT_CHILD; // ちょうどは許可、超えたらNG
+  }
+
+  // Adult 0 かつ Young（のみ）の場合、終了が18:00を超えるYoungはNG
+  if (t.age === 'Young') {
+    return endMinutes <= LIMIT_YOUNG; // ちょうどは許可
+  }
+
+  // ここに来るのは実質 Young 以外（Adult は hasAdultInSet で弾かれている前提）
   return true;
 };
 
@@ -182,8 +225,22 @@ const checkTimeRule = (
  * 理由の順序を安定化（README: 「同伴 → 年齢 → 座席」）
  */
 const orderReasons = (reasons: string[]): string[] => {
-  // TODO ここを実装
-  return reasons;
+  if (reasons.length <= 1) return reasons;
+  const priority: Record<string, number> = {
+    [MSG.NEED_ADULT]: 0,
+    [MSG.AGE_LIMIT]: 1,
+    [MSG.SEAT_LIMIT]: 2,
+  };
+  // 安定ソート相当：index を添えて sort する
+  return reasons
+    .map((r, i) => ({ r, i }))
+    .sort((a, b) => {
+      const pa = priority[a.r] ?? 99;
+      const pb = priority[b.r] ?? 99;
+      if (pa !== pb) return pa - pb;
+      return a.i - b.i; // 同優先度は元の順
+    })
+    .map((x) => x.r);
 };
 
 // 重複排除（stable）
