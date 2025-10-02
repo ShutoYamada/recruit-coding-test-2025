@@ -76,7 +76,7 @@ export const solve = (input: string): string => {
       reasons.push(MSG.SEAT_LIMIT);
     }
 
-    const ordered = orderReasons(reasons); // TODO: 並び替えを実装
+    const ordered = orderReasons(reasons); // TODO: 並び替えを実装 //done
 
     if (ordered.length === 0) {
       evaluated.push({ ok: true, text: `${PRICE[t.age]}円` });
@@ -159,8 +159,8 @@ const checkRating = (
  *  - J〜L は Child 不可
  */
 const checkSeat = (t: Ticket): boolean => {
-  // TODO ここを実装
-  if (t.age === 'Child' && (t.row === 'J' || t.row === 'K' || t.row === 'L')) return false;
+  // TODO ここを実装 //done
+  if (t.age === 'Child' && (t.row >= 'J' && t.row <= 'L')) return false;
   return true;
 };
 
