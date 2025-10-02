@@ -183,7 +183,19 @@ const checkTimeRule = (
   hasAdultInSet: boolean,
   hasChildInSet: boolean
 ): boolean => {
-  // TODO ここを実装
+  // TODO ここを実装 //done
+  if (hasAdultInSet === true) return true;
+  let endHHNumber = endMinutes/60;
+  if (hasAdultInSet === false && hasChildInSet === true)
+  {
+    if (endHHNumber > 16) return false;
+    else return true;
+  }
+  if (hasAdultInSet === false && hasChildInSet === false)
+  {
+    if (endHHNumber > 18) return false;
+    else return true;
+  }
   return true;
 };
 
