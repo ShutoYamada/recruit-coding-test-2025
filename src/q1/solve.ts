@@ -126,11 +126,12 @@ const parseLine = (line: string): Ticket | null => {
   const row = seat[1].toUpperCase();
   const col = parseInt(seat[2], 10);
 
-  if (startHH < 0 || startHH > 23) return null;
-  if (startMM < 0 || startMM > 59) return null;
-  if (durH < 0) return null;
-  if (durM < 0 || durM > 59) return null;
-  if (col < 1 || col > 24) return null;
+  // 範囲チェック
+  if (startHH < 0 || startHH > 23) return null; // 時間外
+  if (startMM < 0 || startMM > 59) return null; // 分外
+  if (durH < 0) return null; // 上映時間不正
+  if (durM < 0 || durM > 59) return null; // 上映分不正
+  if (col < 1 || col > 24) return null; // 列番号範囲外
 
   return {
     age: ageRaw as Age,
@@ -178,7 +179,6 @@ const checkRating = (
  *  - J〜L は Child 不可
  */
 const checkSeat = (t: Ticket): boolean => {
-  // TODO ここを実装
   if (t.age === 'Child' && ['J', 'K', 'L'].includes(t.row)) return false;
   return true;
 };
@@ -196,7 +196,6 @@ const checkTimeRule = (
   hasAdultInSet: boolean,
   hasChildInSet: boolean
 ): boolean => {
-  // TODO ここを実装
   if (hasAdultInSet) return true;
   if (hasChildInSet && endMinutes > 16 * 60) return false;
   if (t.age === 'Young' && endMinutes > 18 * 60) return false;
@@ -207,7 +206,6 @@ const checkTimeRule = (
  * 理由の順序を安定化（README: 「同伴 → 年齢 → 座席」）
  */
 const orderReasons = (reasons: string[]): string[] => {
-  // TODO ここを実装
   const order = [MSG.NEED_ADULT, MSG.AGE_LIMIT, MSG.SEAT_LIMIT];
   return order.filter((msg) => reasons.includes(msg));
 };
