@@ -84,7 +84,7 @@ describe('Q1 solve', () => {
   // ------------------------------
   // [C5] グループ規則（Adult 不在で Child を含む）
   // ------------------------------
-  it.skip('[C5] Adult なし + Young & Child / 終了16:01超 → 両方 同伴必要 で全体不可', () => {
+  it('[C5] Adult なし + Young & Child / 終了16:01超 → 両方 同伴必要 で全体不可', () => {
     const input = [
       'Young,G,15:30,1:00,A-1', // end=16:30
       'Child,G,15:30,1:00,I-2', // end=16:30
@@ -99,7 +99,7 @@ describe('Q1 solve', () => {
     );
   });
 
-  it.skip('[C5] Adult を1枚追加で Young/Child とも購入可（同伴必要が消える）', () => {
+  it('[C5] Adult を1枚追加で Young/Child とも購入可（同伴必要が消える）', () => {
     const input = [
       'Adult,G,15:30,1:00,A-3',
       'Young,G,15:30,1:00,A-1',
