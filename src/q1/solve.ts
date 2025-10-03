@@ -143,13 +143,37 @@ const calcEndMinutes = (t: Ticket): number => {
  *  - PG-12: Child は Adult 同時購入がなければ不可
  *  - R18+: Adult 以外は不可
  */
+
+/**
+ *
+ * @param age - 年齢区分 (Adult | Young | Child) / Age category
+ * @param rating - レーティング (G | PG-12 | R18+) / Movie rating
+ * @param hasAdultInSet - 購入セットに Adult が含まれるか / Whether the ticket set includes an Adult
+ * @returns true=購入可 / purchasable, false=購入不可 / not purchasable
+ */
 const checkRating = (
   age: Age,
   rating: Rating,
   hasAdultInSet: boolean
 ): boolean => {
-  // TODO ここを実装
-  return true;
+  // G は全員OK / G rating: always allowed
+  if (rating === 'G')
+    return true
+
+  // PG-12: Child は Adult がいないと NG / Child requires Adult in set
+  if (rating === 'PG-12') {
+    if (age === 'Child' && !hasAdultInSet) return false
+    return true;
+  }
+
+  // R18+: Adult のみ可 / Only Adult is allowed
+  if (rating === 'R18+') {
+    if (age !== 'Adult') return false
+    return true;
+  }
+
+  // 想定外は NG / Unexpected case -> NG
+  return false;
 };
 
 /**
