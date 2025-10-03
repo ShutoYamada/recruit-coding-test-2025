@@ -186,6 +186,11 @@ const checkTimeRule = (
   hasChildInSet: boolean
 ): boolean => {
   // TODO ここを実装
+  if (!hasAdultInSet) {
+    // Adult = 0
+    if (hasChildInSet) return !(endMinutes > 16 * 60); //Child && 16:00を超える
+    if (t.age === 'Young') return !(endMinutes > 18 * 60); // Young && 18:00を超える
+  }
   return true;
 };
 
