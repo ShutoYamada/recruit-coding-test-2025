@@ -217,8 +217,8 @@ const checkTimeRule = (
   // 個別チケットの終了時刻を計算
   const ticketEndMinutes = calcEndMinutes(t);
 
-  if (t.age === 'Child') {
-    return ticketEndMinutes <= 16 * 60; // Child は 16:00 超えNG
+  if (t.age === 'Child' || (hasChildInSet && t.age === 'Young')) {
+    return ticketEndMinutes <= 16 * 60; // Child または Child 同伴の Young は 16:00 超えNG
   }
 
   if (t.age === 'Young') {
