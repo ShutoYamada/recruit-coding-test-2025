@@ -53,7 +53,8 @@ export const solve = (input: string): string => {
   }
 
   // 同一上映であることを念のためチェック
-  if (!tickets.every((t) => t.rating === tickets[0].rating)) return '不正な入力です';
+  if (!tickets.every((t) => t.rating === tickets[0].rating))
+    return '不正な入力です';
   if (
     !tickets.every(
       (t) =>
@@ -203,6 +204,10 @@ const checkRating = (
  */
 const checkSeat = (t: Ticket): boolean => {
   // TODO ここを実装
+  // J, K, L は Child 不可
+  if (t.age === 'Child' && ['J', 'K', 'L'].includes(t.row)) {
+    return false;
+  }
   return true;
 };
 
