@@ -98,6 +98,15 @@ export const solve = (input: string): string => {
  *  - 座席の列番号 1-24 の範囲チェック
  *  - その他フォーマットの揺れ（必要なら）
  */
+/**
+ *
+ * @param line - 入力行 / Input line
+ * @returns パース結果 or null (不正入力) / Parsed result or null (invalid input)
+ * バリデーション / Validation:
+ * start: HH:MM (0<=HH<=23, 0<=MM<=59)
+ * dur: H:MM (H>=0, 0<=MM<=59)
+ * seat: [A-L]-[1-24]
+ */
 const parseLine = (line: string): Ticket | null => {
   const parts = line.split(',').map((s) => s.trim());
   if (parts.length !== 5) return null;
@@ -118,6 +127,13 @@ const parseLine = (line: string): Ticket | null => {
   const durM = parseInt(dur[2], 10);
   const row = seat[1].toUpperCase();
   const col = parseInt(seat[2], 10);
+
+  // バリデーション / Validation
+  if (startHH < 0 || startHH > 23) return null
+  if (startMM < 0 || startMM > 59) return null
+  if (durH < 0) return null
+  if (durM < 0 || durM > 59) return null
+  if (col < 1 || col > 24) return null
 
   return {
     age: ageRaw as Age,
@@ -236,7 +252,7 @@ const checkTimeRule = (
  */
 
 /**
- * 
+ *
  * @param reasons - 理由リスト / List of reasons
  * @returns 順序が安定化された配列 / Reordered array of reasons
  */
