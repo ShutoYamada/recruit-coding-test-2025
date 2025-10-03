@@ -250,7 +250,16 @@ const checkTimeRule = (
  */
 const orderReasons = (reasons: string[]): string[] => {
   // TODO ここを実装
-  return reasons;
+  if (reasons.length === 0) return [];
+
+  // stable で重複除去
+  const unique = uniqueStable(reasons);
+
+  // 期待順序
+  const order = [MSG.NEED_ADULT, MSG.AGE_LIMIT, MSG.SEAT_LIMIT];
+
+  // order に従ってフィルタ（存在するものだけ順序つきで返す）
+  return order.filter((msg) => unique.includes(msg));
 };
 
 // 重複排除（stable）
