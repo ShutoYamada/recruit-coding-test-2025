@@ -198,7 +198,30 @@ const checkTimeRule = (
   hasAdultInSet: boolean,
   hasChildInSet: boolean
 ): boolean => {
-  // TODO ここを実装
+  // セット内に大人がいる場合 → 常にOK
+  if (hasAdultInSet) {
+    return true;
+  }
+
+  // 大人がいない場合
+  // 16:00 = 16 * 60 = 960 分
+  // 18:00 = 18 * 60 = 1080 分
+
+  // 子供が含まれていて、終了時刻が16:00を超える場合 → 全員禁止
+  if (hasChildInSet && endMinutes > 16 * 60) {
+    return false; // Young も Child も禁止
+  }
+
+  // 子供: 終了時刻が16:00を超えると大人が必要
+  if (t.age === 'Child' && endMinutes > 16 * 60) {
+    return false;
+  }
+
+  // Young: 終了時刻が18:00を超えると大人が必要
+  if (t.age === 'Young' && endMinutes > 18 * 60) {
+    return false;
+  }
+
   return true;
 };
 
