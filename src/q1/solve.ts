@@ -197,11 +197,17 @@ const checkRating = (
 };
 
 /**
- * 座席の規則
- *  - J〜L は Child 不可
+ * 座席の規則 / Seat rules
+ *  - A〜L は Adult/Young/Child 可 / A-L rows: Adult/Young/Child allowed
+ *  - J〜L は Child 不可 / J-L rows: Child not allowed
  */
 const checkSeat = (t: Ticket): boolean => {
-  // TODO ここを実装
+  if (t.age === 'Child') {
+    // J, K, L 行は Child 不可 / Child cannot sit in rows J, K, L
+    if (t.row === 'J' || t.row === 'K' || t.row === 'L') {
+      return false;
+    }
+  }
   return true;
 };
 
