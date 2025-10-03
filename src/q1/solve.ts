@@ -81,7 +81,7 @@ export const solve = (input: string): string => {
       reasons.push(MSG.SEAT_LIMIT);
     }
 
-    const ordered = orderReasons(reasons); // TODO: 並び替えを実装
+    const ordered = orderReasons(reasons);
 
     if (ordered.length === 0) {
       evaluated.push({ ok: true, text: `${PRICE[t.age]}円` });
@@ -184,11 +184,13 @@ const checkTimeRule = (
 };
 
 /**
- * 理由の順序を安定化（README: 「同伴 → 年齢 → 座席」）
+ * 理由の順序を安定化 / Stable order of reasons
+ * 順序: 同伴必要 → 年齢制限 → 座席制限 / Order: Need Adult → Age Limit → Seat Limit
  */
 const orderReasons = (reasons: string[]): string[] => {
-  // TODO ここを実装
-  return reasons;
+  const order = [MSG.NEED_ADULT, MSG.AGE_LIMIT, MSG.SEAT_LIMIT];
+
+  return order.filter((msg) => reasons.includes(msg));
 };
 
 // 重複排除（stable）
