@@ -55,7 +55,7 @@ describe('Q1 solve', () => {
   // ------------------------------
   // [C3] 座席規則（J〜L × Child）
   // ------------------------------
-  it.skip('[C3] Child の I 行は購入可 / J 行は購入不可 / L 行は購入不可', () => {
+  it('[C3] Child の I 行は購入可 / J 行は購入不可 / L 行は購入不可', () => {
     const ok = solve('Child,G,10:00,1:00,I-1');
     const j = solve('Child,G,10:00,1:00,J-1');
     const l = solve('Child,G,10:00,1:00,L-24');

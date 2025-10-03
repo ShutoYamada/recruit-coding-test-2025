@@ -178,7 +178,10 @@ const checkRating = (
  *  - J〜L は Child 不可
  */
 const checkSeat = (t: Ticket): boolean => {
-  // TODO ここを実装
+  // 子供は J、K、L 列に座ることができない
+  if (t.age === 'Child' && ['J', 'K', 'L'].includes(t.row)) {
+    return false;
+  }
   return true;
 };
 
