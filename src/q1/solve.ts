@@ -170,7 +170,7 @@ const checkRating = (
  *  - J〜L は Child 不可
  */
 const checkSeat = (t: Ticket): boolean => {
-  // TODO ここを実装
+  if(t.age === "Child" && t.row >= "J" && t.row <= "L") return false;
   return true;
 };
 
