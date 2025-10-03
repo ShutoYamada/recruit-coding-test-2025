@@ -18,8 +18,15 @@ const main = async () => {
   if (!file) throw new Error('--file is required');
   const from = args['from'] || '1970-01-01';
   const to = args['to'] || '2100-12-31';
-  const tz = (args['tz'] || 'jst').toLowerCase();
-  const top = parseInt(args['top'] || '5', 10);
+  const tzArg = (args['tz'] || 'jst').toLowerCase();
+  if (tzArg !== 'jst' && tzArg !== 'ict') {
+    throw new Error("--tz must be 'jst' or 'ict'");
+  }
+  const tz: 'jst' | 'ict' = tzArg as 'jst' | 'ict';
+  let top = parseInt(args['top'] || '5', 10);
+  if (!Number.isFinite(top) || top <= 0) {
+    top = 5; // フォールバック
+  }
 
   // 逐次読み込み
   const rl = createInterface({
@@ -33,7 +40,7 @@ const main = async () => {
     rows.push(line);
   }
 
-  const result = aggregate(rows, { from, to, tz: tz as never, top });
+  const result = aggregate(rows, { from, to, tz, top });
   stdout.write(JSON.stringify(result) + '\n');
 };
 
