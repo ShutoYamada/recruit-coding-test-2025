@@ -86,8 +86,13 @@ export const solve = (input: string): string => {
     }
   }
 
-  // TODO 「全体不可」のときは価格を出さず、NG行の理由だけを出力する
+  // 全体不可なら NG 行だけを出力
+  if (anyNg) {
+    const ngLines = evaluated.filter((e) => !e.ok).map((e) => e.text);
+    return ngLines.join('\n');
+  }
 
+  // 全部 OK なら価格行を出力
   return evaluated.map((e) => e.text).join('\n');
 };
 
@@ -198,7 +203,19 @@ const checkTimeRule = (
  * 理由の順序を安定化（README: 「同伴 → 年齢 → 座席」）
  */
 const orderReasons = (reasons: string[]): string[] => {
-  // TODO ここを実装
+
+  const priority: Record<string, number> = {
+    [MSG.NEED_ADULT]: 1, // 同伴必要
+    [MSG.AGE_LIMIT]: 2,  // 年齢制限
+    [MSG.SEAT_LIMIT]: 3, // 座席制限
+  };
+
+  const uniqueReasons = uniqueStable(reasons);
+
+  return uniqueReasons.sort((a, b) => {
+    return (priority[a] ?? 99) - (priority[b] ?? 99);
+  });
+
   return reasons;
 };
 
