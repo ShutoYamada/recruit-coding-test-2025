@@ -235,25 +235,25 @@ const checkTimeRule = (
  */
 const orderReasons = (reasons: string[]): string[] => {
   const order = [
-    MSG.NEED_ADULT,    // 同伴必要が最優先
-    MSG.AGE_LIMIT,     // 年齢制限が次
-    MSG.SEAT_LIMIT,    // 座席制限が最後
+    MSG.NEED_ADULT, // 同伴必要が最優先
+    MSG.AGE_LIMIT, // 年齢制限が次
+    MSG.SEAT_LIMIT, // 座席制限が最後
   ] as const;
 
   // 定義された順序に従ってソート
   return reasons.sort((a, b) => {
-    const indexA = order.indexOf(a as typeof order[number]);
-    const indexB = order.indexOf(b as typeof order[number]);
-    
+    const indexA = order.indexOf(a as (typeof order)[number]);
+    const indexB = order.indexOf(b as (typeof order)[number]);
+
     // 両方が定義された順序にある場合
     if (indexA !== -1 && indexB !== -1) {
       return indexA - indexB;
     }
-    
+
     // 片方だけが定義された順序にある場合
     if (indexA !== -1) return -1;
     if (indexB !== -1) return 1;
-    
+
     // どちらも定義された順序にない場合（通常は発生しない）
     return 0;
   });
