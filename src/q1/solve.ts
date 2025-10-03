@@ -177,6 +177,23 @@ const checkRating = (
   hasAdultInSet: boolean
 ): boolean => {
   // TODO ここを実装
+  // G は誰でも可
+  if (rating === 'G') return true;
+
+  // PG-12 は Child に Adult の同伴が必要
+  if (rating === 'PG-12') {
+    if (age === 'Child' && !hasAdultInSet) {
+      return false;
+    }
+    return true; // Adult / Young は OK
+  }
+
+  // R18+ は Adult のみ
+  if (rating === 'R18+') {
+    return age === 'Adult';
+  }
+
+  // デフォルトは許可（到達しないはず）
   return true;
 };
 
