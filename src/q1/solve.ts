@@ -86,8 +86,16 @@ export const solve = (input: string): string => {
     }
   }
 
-  // TODO 「全体不可」のときは価格を出さず、NG行の理由だけを出力する
+  // 全体不可の場合は価格を出さず、NG行の理由のみ出力
+  // If any ticket is NG -> suppress prices, output only reasons
+  if (anyNg) {
+    return evaluated
+      .filter((e) => !e.ok)
+      .map((e) => e.text)
+      .join('\n');
+  }
 
+  // 全員OKなら価格を出力 / If all OK -> output prices
   return evaluated.map((e) => e.text).join('\n');
 };
 
