@@ -94,7 +94,11 @@ export const solve = (input: string): string => {
   }
 
   // TODO 「全体不可」のときは価格を出さず、NG行の理由だけを出力する
-
+  if(anyNg) {
+    // NG行だけを返す
+    return evaluated.map((e) => e.ok ? "" : e.text).filter((e) => e).join('\n');
+  }
+  // 全部OKの場合 → 価格を返す
   return evaluated.map((e) => e.text).join('\n');
 };
 
