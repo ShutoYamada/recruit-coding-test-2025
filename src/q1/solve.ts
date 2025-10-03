@@ -234,9 +234,21 @@ const checkTimeRule = (
 /**
  * 理由の順序を安定化（README: 「同伴 → 年齢 → 座席」）
  */
+
+/**
+ * 
+ * @param reasons - 理由リスト / List of reasons
+ * @returns 順序が安定化された配列 / Reordered array of reasons
+ */
 const orderReasons = (reasons: string[]): string[] => {
-  // TODO ここを実装
-  return reasons;
+  const priority: Record<string, number> = {
+    [MSG.NEED_ADULT]: 1,
+    [MSG.AGE_LIMIT]: 2,
+    [MSG.SEAT_LIMIT]: 3,
+  }
+  return reasons.slice().sort((a, b) => {
+    return (priority[a] ?? 99) - (priority[b] ?? 99);
+  })
 };
 
 // 重複排除（stable）
