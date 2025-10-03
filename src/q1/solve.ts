@@ -180,8 +180,16 @@ const checkRating = (
  * 座席の規則
  *  - J〜L は Child 不可
  */
+
+/**
+ * 
+ * @param t - チケット情報 / Ticket info
+ * @returns true=利用可 / allowed, false=利用不可 / not allowed
+ */
 const checkSeat = (t: Ticket): boolean => {
-  // TODO ここを実装
+  if (t.age === 'Child' && ['J', 'K', 'L'].includes(t.row)) {
+    return false;
+  }
   return true;
 };
 
