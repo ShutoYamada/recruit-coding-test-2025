@@ -156,6 +156,9 @@ const parseLine = (line: string): Ticket | null => {
   };
 };
 
+/**
+ * 上映終了時刻を分単位で計算 / Calculate end time in minutes
+ */
 const calcEndMinutes = (t: Ticket): number => {
   const start = t.startHH * 60 + t.startMM;
   const end = start + t.durH * 60 + t.durM;
@@ -173,7 +176,23 @@ const checkRating = (
   rating: Rating,
   hasAdultInSet: boolean
 ): boolean => {
-  // TODO ここを実装
+  if (rating === 'G') {
+    return true; // 誰でも可 / Anyone can watch
+  }
+
+  if (rating === 'PG-12') {
+    // Child は Adult 同時購入が必要 / Child needs to be accompanied by Adult
+    if (age === 'Child' && !hasAdultInSet) {
+      return false;
+    }
+    return true;
+  }
+
+  if (rating === 'R18+') {
+    // Adult 以外は不可 / Only Adult can watch
+    return age === 'Adult';
+  }
+
   return true;
 };
 
