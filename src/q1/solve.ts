@@ -181,7 +181,7 @@ const checkRating = (
  */
 const checkSeat = (t: Ticket): boolean => {
   // TODO ここを実装
-  if (t.row >= 'J' && t.age === 'Child') return false; // J〜L は Child 不可
+  if (t.row >= 'J' && t.row <= 'L' && t.age === 'Child') return false; // J〜L は Child 不可
   return true;
 };
 
