@@ -127,7 +127,7 @@ const parseLine = (line: string): Ticket | null => {
   const row = seat[1].toUpperCase();
   const col = parseInt(seat[2], 10);
 
-  
+  // 簡易範囲チェック
   if( startHH < 0 || startHH > 23  ) return null;
   if( startMM < 0 || startMM > 59 ) return null;
   if( durH < 0 ) return null;
@@ -181,6 +181,7 @@ const checkRating = (
  *  - J〜L は Child 不可
  */
 const checkSeat = (t: Ticket): boolean => {
+  if(['J', 'K', 'L'].includes(t.row) && t.age === 'Child') return false;
   // TODO ここを実装
   return true;
 };
