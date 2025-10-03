@@ -87,6 +87,14 @@ export const solve = (input: string): string => {
   }
 
   // TODO 「全体不可」のときは価格を出さず、NG行の理由だけを出力する
+  //  - anyNg が true のとき
+  //  - evaluated のうち ok: false の行だけを抽出して text を改行で連結
+  if (anyNg) {
+    return evaluated
+      .filter((e) => !e.ok)
+      .map((e) => e.text)
+      .join('\n');
+  }
 
   return evaluated.map((e) => e.text).join('\n');
 };
