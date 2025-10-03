@@ -9,6 +9,7 @@
     - [WSL(Windows Subsystem for Linux)](https://learn.microsoft.com/ja-jp/windows/wsl/install)
     - Vscodeの拡張機能[Dev Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
 - CI は `typecheck`/`lint`/`test`/`docker build` を実行します。
+- test
 
 # ディレクトリ構成
 
