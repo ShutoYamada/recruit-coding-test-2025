@@ -181,7 +181,7 @@ const checkSeat = (t: Ticket): boolean => {
     // J〜L は Child 不可
     return !['J', 'K', 'L'].includes(t.row);
   }
-  
+
   return true; // Adult/Young: 座席制限なし
 };
 
@@ -199,7 +199,25 @@ const checkTimeRule = (
   hasChildInSet: boolean
 ): boolean => {
   // TODO ここを実装
-  return true;
+ 
+  // Adult は時刻制限なし
+  if (t.age === 'Adult') return true;
+  
+  // Adult がいれば時刻制限なし
+  if (hasAdultInSet) return true;
+
+  // 個別チケットの終了時刻を計算
+  const ticketEndMinutes = calcEndMinutes(t);
+
+  if (t.age === 'Child') {
+    return ticketEndMinutes <= 16 * 60; // Child は 16:00 超えNG
+  }
+  
+  if (t.age === 'Young') {
+    return ticketEndMinutes <= 18 * 60; // Young は 18:00 超えNG
+  }
+
+  return true; // Adult がいれば常にOK
 };
 
 /**
