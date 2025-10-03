@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
+ /* eslint-disable @typescript-eslint/no-unused-vars */
 
 export type Age = 'Adult' | 'Young' | 'Child';
 export type Rating = 'G' | 'PG-12' | 'R18+';
@@ -199,6 +199,13 @@ const checkTimeRule = (
   hasAdultInSet: boolean,
   hasChildInSet: boolean
 ): boolean => {
+  if( hasAdultInSet ) return true;
+  if( hasChildInSet ) {
+    if( endMinutes > 16 * 60 ) return false;
+    return true;
+  }
+  if( t.age === 'Young' && endMinutes > 18 * 60 ) return false;
+  if( t.age === 'Child' ) return false;
   // TODO ここを実装
   return true;
 };
