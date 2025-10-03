@@ -32,15 +32,40 @@ export const aggregate = (lines: string[], opt: Options): Output => {
 
 export const parseLines = (lines: string[]): Row[] => {
   const out: Row[] = [];
-  for (const line of lines) {
-    const [timestamp, userId, path, status, latencyMs] = line.split(',');
-    if (!timestamp || !userId || !path || !status || !latencyMs) continue; // 壊れ行はスキップ
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) continue;
+
+    // Bỏ qua header
+    if (
+      /^timestamp\s*,\s*userId\s*,\s*path\s*,\s*status\s*,\s*latencyMs$/i.test(
+        line
+      )
+    ) {
+      continue;
+    }
+
+    const parts = line.split(',');
+    if (parts.length !== 5) continue; // bỏ qua nếu thiếu cột
+
+    const [timestamp0, userId0, path0, status0, latency0] = parts.map((s) =>
+      s.trim()
+    );
+
+    const t = Date.parse(timestamp0);
+    const status = Number(status0);
+    const latencyMs = Number(latency0);
+
+    if (!Number.isFinite(t)) continue; // timestamp hỏng
+    if (!Number.isFinite(status)) continue; // status không phải số
+    if (!Number.isFinite(latencyMs)) continue; // latency không phải số
+
     out.push({
-      timestamp: timestamp.trim(),
-      userId: userId.trim(),
-      path: path.trim(),
-      status: Number(status),
-      latencyMs: Number(latencyMs),
+      timestamp: new Date(t).toISOString(),
+      userId: userId0,
+      path: path0,
+      status,
+      latencyMs,
     });
   }
   return out;
