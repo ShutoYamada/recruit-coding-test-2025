@@ -167,6 +167,7 @@ const checkRating = (
  */
 const checkSeat = (t: Ticket): boolean => {
   // TODO ここを実装
+  if (['J', 'K', 'L'].includes(t.row) && t.age === 'Child') return false; // Child は不可
   return true;
 };
 
@@ -192,6 +193,7 @@ const checkTimeRule = (
  */
 const orderReasons = (reasons: string[]): string[] => {
   // TODO ここを実装
+
   return reasons;
 };
 
