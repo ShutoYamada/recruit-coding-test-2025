@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseLines } from './core.js';
+import { filterByDate, parseLines } from './core.js';
 
 describe('Q2 core', () => {
   /**
@@ -31,14 +31,8 @@ describe('Q2 core', () => {
       '2025-01-03T23:59:59Z,u3,/c,200,200', // boundary end
       '2025-01-04T00:00:00Z,u4,/d,200,250', // out of range
     ])
-    const from = '2025-01-01'
-    const to = '2025-01-03'
-    const fromT = Date.parse(from + 'T00:00:00Z')
-    const toT = Date.parse(to + 'T23:59:59Z')
-    const filtered = rows.filter((r) => {
-      const t = Date.parse(r.timestamp);
-      return t >= fromT && t <= toT;
-    })
+
+    const filtered = filterByDate(rows, '2025-01-01', '2025-01-03')
 
     expect(filtered.length).toBe(3);
     expect(filtered.map((r) => r.path)).toEqual(['/a', '/b', '/c'])
