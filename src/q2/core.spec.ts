@@ -49,7 +49,41 @@ describe('Q2 core', () => {
     const totalCount = out.reduce((s, r) => s + r.count, 0);
     expect(totalCount).toBe(2);
   });
+
   // [C3] タイムゾーン：UTC→JST/ICT の変換で 日付跨ぎが正しい
+  it('TZ: UTC→JST date crossing is correct', () => {
+    const lines = [
+      // JST = UTC+9
+      '2025-01-01T01:00:00Z,u1,/a,200,100', // JST 2025-01-01
+      '2025-01-01T16:30:00Z,u2,/a,200,100', // JST 2025-01-02 (cross-day)
+    ];
+    const out = aggregate(lines, {
+      from: '2024-12-31',
+      to: '2025-01-03',
+      tz: 'jst',
+      top: 10,
+    });
+    // 同一のpathで2つの異なる日付になることを確認
+    const dates = out.map((r) => r.date);
+    expect(new Set(dates)).toEqual(new Set(['2025-01-01', '2025-01-02']));
+  });
+
+  it('TZ: UTC→ICT date crossing is correct', () => {
+    const lines = [
+      // ICT = UTC+7
+      '2025-01-01T01:00:00Z,u1,/a,200,100', // ICT 2025-01-01 08:00 → 2025-01-01
+      '2025-01-01T17:30:00Z,u2,/a,200,100', // ICT 2025-01-02 00:30 → 2025-01-02 (cross-day)
+    ];
+    const out = aggregate(lines, {
+      from: '2024-12-31',
+      to: '2025-01-03',
+      tz: 'ict',
+      top: 10,
+    });
+    const dates = out.map((r) => r.date);
+    expect(new Set(dates)).toEqual(new Set(['2025-01-01', '2025-01-02']));
+  });
+
   // [C4] 集計：date×path の件数・平均が合う
   // [C5] 上位N：日付ごとに count 降順、同数は path 昇順
   // [C6] 出力順：date ASC, count DESC, path ASC の 決定的順序
