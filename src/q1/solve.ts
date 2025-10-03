@@ -159,7 +159,9 @@ const checkRating = (
   rating: Rating,
   hasAdultInSet: boolean
 ): boolean => {
-  // TODO ここを実装
+  if(rating === "G") return true;
+  if(rating === "PG-12" && age === "Child" && !hasAdultInSet) return false;
+  if(rating === "R18+" && !(age === "Adult")) return false;
   return true;
 };
 
