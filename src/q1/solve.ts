@@ -35,37 +35,42 @@ const MSG = {
  *   - parseLine のバリデーションは最小限（境界チェックなどを追加実装すること）
  *   - 「全体不可」時の価格抑制ロジックを実装すること
  */
+
+/**
+ * メイン処理関数  / Main Process Function
+ * 入力された複数チケットを検証し、価格または理由を返す / Validate tickets and return price or reasons
+ */
 export const solve = (input: string): string => {
   const lines = input
     .split(/\r?\n/)
     .map((s) => s.trim())
     .filter(Boolean);
 
-  // smoke 用：空入力は空出力（テスト配線確認）
+  // smoke 用：空入力は空出力（テスト配線確認）/ In case of empty input, return empty output
   if (lines.length === 0) return '';
 
-  // 入力をパース（不正なら即終了）
+  // 入力をパース（不正なら即終了）/ Parse input, return error immediately if invalid
   const tickets: Ticket[] = [];
   for (const line of lines) {
     const t = parseLine(line);
-    if (!t) return '不正な入力です'; // TODO: 必要に応じて詳細化してもよい（仕様は1行固定でOK）
+    if (!t) return '不正な入力です';
     tickets.push(t);
   }
 
-  // セット属性（同一上映前提）
+  // セット属性（同一上映前提）/ Set of attributes (assuming group tickets share the same screening)
   const hasAdult = tickets.some((t) => t.age === 'Adult');
   const hasChild = tickets.some((t) => t.age === 'Child'); // C5 で使用（グループ規則）
   const rating = tickets[0].rating;
   const endMinutes = calcEndMinutes(tickets[0]); // 今年は日跨ぎなし前提
 
-  // 各行の評価
+  // 各行の評価 / Evaluate each line
   const evaluated: { ok: boolean; text: string }[] = [];
   let anyNg = false;
 
   for (const t of tickets) {
     const reasons: string[] = [];
 
-    // 理由の push 順は README の順序に合わせておく（後で orderReasons で厳密化）
+    // 理由の push 順は README の順序に合わせておく（後で orderReasons で厳密化）/ Push reasons in the order specified in README (will refine with orderReasons later)
     if (!checkTimeRule(t, endMinutes, hasAdult, hasChild)) {
       reasons.push(MSG.NEED_ADULT);
     }
