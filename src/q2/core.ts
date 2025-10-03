@@ -33,17 +33,26 @@ export const aggregate = (lines: string[], opt: Options): Output => {
 export const parseLines = (lines: string[]): Row[] => {
   const out: Row[] = [];
   for (const line of lines) {
-    const [timestamp, userId, path, status, latencyMs] = line.split(',');
-    if (!timestamp || !userId || !path || !status || !latencyMs) continue; // 壊れ行はスキップ
+    const parts = line.split(',').map((s) => s.trim())
+    if (parts.length !== 5) continue; // 壊れ行はスキップ/Skip if column count is wrong
+
+    const [timestamp, userId, path, statusRaw, latencyRaw] = parts
+
+    const status = Number(statusRaw)
+    const latencyMs = Number(latencyRaw)
+
+    // 数値変換できない行はスキップ/Skip if number conversion fails
+    if (isNaN(status) || isNaN(latencyMs)) continue
+
     out.push({
-      timestamp: timestamp.trim(),
-      userId: userId.trim(),
-      path: path.trim(),
-      status: Number(status),
-      latencyMs: Number(latencyMs),
-    });
+      timestamp,
+      userId,
+      path,
+      status,
+      latencyMs,
+    })
   }
-  return out;
+  return out
 };
 
 const filterByDate = (rows: Row[], from: string, to: string): Row[] => {
