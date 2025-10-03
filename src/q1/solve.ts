@@ -156,7 +156,19 @@ const checkRating = (
   hasAdultInSet: boolean
 ): boolean => {
   // TODO ここを実装
-  return true;
+
+  // PG-12: Adult 同時購入がなければ Child は不可
+  if (rating === 'PG-12') {
+    if (age === 'Adult' || age ==='Young' ) return true;
+    return hasAdultInSet; // Child の場合、Adult 同時購入があれば可
+  }
+
+  // R18+: Adult 以外は不可
+  if (rating === 'R18+') {
+    return age === 'Adult';
+  } 
+
+  return true;  // G rating: 誰でもOK
 };
 
 /**
