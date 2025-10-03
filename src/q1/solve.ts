@@ -155,8 +155,22 @@ const checkRating = (
   rating: Rating,
   hasAdultInSet: boolean
 ): boolean => {
-  // TODO ここを実装
-  return true;
+  switch (rating) {
+    case 'G':
+      return true; // 全員OK
+
+    case 'PG-12':
+      if (age === 'Child' && !hasAdultInSet) {
+        return false; // Childは同伴必要
+      }
+      return true;
+
+    case 'R18+':
+      return age === 'Adult'; // Adult以外は不可
+
+    default:
+      return false; // 未知のレーティングは不可
+  }
 };
 
 /**
