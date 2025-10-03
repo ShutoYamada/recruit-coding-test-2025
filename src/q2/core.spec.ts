@@ -1,5 +1,6 @@
+/* eslint-disable max-lines-per-function */
 import { describe, expect, it } from 'vitest';
-import { filterByDate, parseLines, toTZDate, groupByDatePath, rankTop } from './core.js';
+import { filterByDate, parseLines, toTZDate, groupByDatePath, rankTop, aggregate } from './core.js';
 
 describe('Q2 core', () => {
   /**
@@ -89,6 +90,11 @@ describe('Q2 core', () => {
     expect(orders0404?.avgLatency).toBe(120)
   })
 
+  /**
+   * -----------------
+   * rankTop tests
+   * -----------------
+   */
   it('rankTop: selects top N per date and sorts output', () => {
     const items = [
       { date: '2025-01-01', path: '/b', count: 10, avgLatency: 100 },
@@ -105,6 +111,38 @@ describe('Q2 core', () => {
     expect(ranked.filter(r => r.date === '2025-01-01').map(r => r.path)).toEqual(['/a', '/b']) // /a before /b due to avgLatency
 
     expect(ranked.filter(r => r.date === '2025-01-02').map(r => r.path)).toEqual(['/z', '/x']) // sorted by count desc
+  })
+
+  /**-----------------
+   * aggregate tests
+   * -----------------
+   */
+  it('aggregate: end-to-end basic flow', () => {
+    const lines = [
+      '2025-01-01T10:00:00Z,u1,/api/orders,200,100',
+      '2025-01-01T11:00:00Z,u2,/api/orders,200,200',
+      '2025-01-01T12:00:00Z,u3,/api/users,200,150',
+      '2025-01-02T09:00:00Z,u4,/api/orders,200,120',
+      '2025-01-02T10:00:00Z,u5,/api/orders,200,180',
+      '2025-01-02T11:00:00Z,u6,/api/users,200,90',
+    ]
+
+    const result = aggregate(lines, {
+      from: '2025-01-01',
+      to: '2025-01-02',
+      tz: 'jst',
+      top: 2,
+    });
+
+    // 2025-01-01 JST -> /api/orders (2 calls, avg=150), /api/users (1 call, avg=150)
+    // 2025-01-02 JST -> /api/orders (2 calls, avg=150), /api/users (1 call, avg=90)
+
+    expect(result).toEqual([
+      { date: '2025-01-01', path: '/api/orders', count: 2, avgLatency: 150 },
+      { date: '2025-01-01', path: '/api/users', count: 1, avgLatency: 150 },
+      { date: '2025-01-02', path: '/api/orders', count: 2, avgLatency: 150 },
+      { date: '2025-01-02', path: '/api/users', count: 1, avgLatency: 90 },
+    ])
   })
 
   // it.todo('aggregate basic');
