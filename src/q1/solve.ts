@@ -196,8 +196,17 @@ const checkTimeRule = (
  */
 const orderReasons = (reasons: string[]): string[] => {
   // TODO ここを実装
-
-  return reasons;
+  const priority = {
+    [MSG.NEED_ADULT]: 1,
+    [MSG.AGE_LIMIT]: 2,
+    [MSG.SEAT_LIMIT]: 3,
+  }; // 優先度（小さいほど前）
+  return [...reasons].sort((a, b) => {
+    // 2つの理由を優先する
+    const pa = priority[a];
+    const pb = priority[b];
+    return pa - pb; // 昇順
+  }); // 安定化ソート（元順序を保つ）
 };
 
 // 重複排除（stable）
