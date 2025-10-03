@@ -105,7 +105,7 @@ const parseLine = (line: string): Ticket | null => {
 
   // 年齢区分の検証
   if (!['Adult', 'Young', 'Child'].includes(ageRaw)) return null;
-  
+
   // レーティングの検証
   if (!['G', 'PG-12', 'R18+'].includes(ratingRaw)) return null;
 
@@ -125,7 +125,7 @@ const parseLine = (line: string): Ticket | null => {
   // 時刻の範囲検証
   if (startHH < 0 || startHH > 23) return null;
   if (startMM < 0 || startMM > 59) return null;
-  if (durH < 0) return null;  // 上映時間は0以上
+  if (durH < 0) return null; // 上映時間は0以上
   if (durM < 0 || durM > 59) return null;
 
   // 座席の範囲検証 (A-L行, 1-24列)
@@ -180,7 +180,11 @@ const checkRating = (
  *  - J〜L は Child 不可
  */
 const checkSeat = (t: Ticket): boolean => {
-  // TODO ここを実装
+  if (t.age === 'Child') {
+    // Child は J, K, L 行は座れない
+    return !['J', 'K', 'L'].includes(t.row);
+  }
+  // Adult, Young は全ての座席に座れる
   return true;
 };
 
