@@ -84,24 +84,17 @@ export const solve = (input: string): string => {
       evaluated.push({ ok: true, text: `${PRICE[t.age]}円` });
     } else {
       anyNg = true;
-      evaluated.push({ ok: false, text: uniqueStable(ordered).join(',') });
+      evaluated.push({ ok: false, text: ordered.join(',') });
     }
   }
 
   // TODO 「全体不可」のときは価格を出さず、NG行の理由だけを出力する
 
   if (anyNg) {
-    const rawReasons = evaluated
+    return evaluated
       .filter((e) => !e.ok)
-      .flatMap((e) => e.text.split(','))
-      .map((s) => s.trim())
-      .filter((s) => s.length > 0);
-
-    const uniq = uniqueStable(rawReasons);
-    const orderedFinal = orderReasons(uniq);
-    const reasonStr = orderedFinal.join(',');
-
-    return lines.map(() => reasonStr).join('\n');
+      .map((e) => e.text)
+      .join('\n');
   }
 
   return evaluated.map((e) => e.text).join('\n');
@@ -134,6 +127,11 @@ const parseLine = (line: string): Ticket | null => {
   const durM = parseInt(dur[2], 10);
   const row = seat[1].toUpperCase();
   const col = parseInt(seat[2], 10);
+
+  if (startHH < 0 || startHH > 23) return null;
+  if (startMM < 0 || startMM > 59) return null;
+  if (durH < 0 || durM < 0 || durM > 59) return null;
+  if (col < 1 || col > 24) return null;
 
   return {
     age: ageRaw as Age,
