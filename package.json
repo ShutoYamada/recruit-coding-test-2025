@@ -13,7 +13,9 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "build": "tsc -p tsconfig.json",
     "q1:run": "tsx src/q1/cli.ts",
-    "q2:run": "tsx src/q2/main.ts"
+    "q2:run": "tsx src/q2/main.ts",
+    "q1:test": "vitest src/q1/solve.spec.ts",
+    "q2:test": "vitest src/q2/main.spec.ts"
   },
   "devDependencies": {
     "@types/node": "^22.7.5",

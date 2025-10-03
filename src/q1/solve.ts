@@ -86,6 +86,14 @@ export const solve = (input: string): string => {
     }
   }
 
+  if (anyNg) {
+    for (let i = 0; i < evaluated.length; i++) {
+      if (evaluated[i].ok) {
+        evaluated[i].ok = false;
+        evaluated[i].text = '';
+      }
+    }
+  }
   // TODO 「全体不可」のときは価格を出さず、NG行の理由だけを出力する
 
   return evaluated.map((e) => e.text).join('\n');
@@ -118,6 +126,13 @@ const parseLine = (line: string): Ticket | null => {
   const durM = parseInt(dur[2], 10);
   const row = seat[1].toUpperCase();
   const col = parseInt(seat[2], 10);
+
+  
+  if( startHH < 0 || startHH > 23  ) return null;
+  if( startMM < 0 || startMM > 59 ) return null;
+  if( durH < 0 ) return null;
+  if( durM < 0 || durM > 59 ) return null;
+  if( col < 1 || col > 24 ) return null;
 
   return {
     age: ageRaw as Age,
