@@ -205,4 +205,57 @@ describe('Q1 solve', () => {
     expect(child).toBe('800円');
     expect(young).toBe('1200円');
   });
+
+  // ------------------------------
+  // [C10] 座席制限の網羅的検証
+  // ------------------------------
+  it('[C10] Child: I行とJ行の境界検証（I-24 OK, J-1 NG）', () => {
+    const iRow = solve('Child,G,10:00,1:00,I-24'); // I行の最後
+    const jRow = solve('Child,G,10:00,1:00,J-1'); // J行の最初
+
+    expect(iRow).toBe('800円');
+    expect(jRow).toBe('対象のチケットではその座席をご利用いただけません');
+  });
+
+  it('[C10] Child: J-L行すべてでNG確認', () => {
+    const restrictedRows = ['J', 'K', 'L'];
+
+    restrictedRows.forEach((row) => {
+      const result = solve(`Child,G,10:00,1:00,${row}-12`);
+      expect(result).toBe('対象のチケットではその座席をご利用いただけません');
+    });
+  });
+
+  it('[C10] Adult/Young: 全座席A-L利用可能', () => {
+    const allRows = [
+      'A',
+      'B',
+      'C',
+      'D',
+      'E',
+      'F',
+      'G',
+      'H',
+      'I',
+      'J',
+      'K',
+      'L',
+    ];
+
+    allRows.forEach((row) => {
+      const adult = solve(`Adult,G,10:00,1:00,${row}-12`);
+      const young = solve(`Young,G,10:00,1:00,${row}-12`);
+
+      expect(adult).toBe('1800円');
+      expect(young).toBe('1200円');
+    });
+  });
+
+  it('[C10] 列番号の境界値: 1列目と24列目', () => {
+    const col1 = solve('Child,G,10:00,1:00,I-1');
+    const col24 = solve('Child,G,10:00,1:00,I-24');
+
+    expect(col1).toBe('800円');
+    expect(col24).toBe('800円');
+  });
 });
