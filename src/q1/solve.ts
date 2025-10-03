@@ -119,6 +119,13 @@ const parseLine = (line: string): Ticket | null => {
   const row = seat[1].toUpperCase();
   const col = parseInt(seat[2], 10);
 
+  // 最小限のバリデーション
+  if (startHH < 0 || startHH > 23) return null;  // 時間: 0-23
+  if (startMM < 0 || startMM > 59) return null;  // 分: 0-59
+  if (durM >= 60) return null;                   // 上映時間の分: 0-59
+  if (col < 1 || col > 24) return null;          // 座席番号: 1-24
+
+
   return {
     age: ageRaw as Age,
     rating: ratingRaw as Rating,
