@@ -174,4 +174,35 @@ describe('Q1 solve', () => {
       expect(solve(bad)).toBe('不正な入力です');
     }
   });
+
+  // ------------------------------
+  // [C9] 境界値テスト - 時刻の精密検証
+  // ------------------------------
+  it('[C9] Child: 16:00境界の精密テスト（15:59 OK, 16:00 OK, 16:01 NG）', () => {
+    const before = solve('Child,G,15:58,0:01,I-1'); // end=15:59
+    const exactly = solve('Child,G,15:59,0:01,I-2'); // end=16:00 exactly
+    const after = solve('Child,G,15:58,0:03,I-3'); // end=16:01
+
+    expect(before).toBe('800円');
+    expect(exactly).toBe('800円'); // 16:00ちょうどはOK
+    expect(after).toBe('対象の映画の入場には大人の同伴が必要です');
+  });
+
+  it('[C9] Young: 18:00境界の精密テスト（17:59 OK, 18:00 OK, 18:01 NG）', () => {
+    const before = solve('Young,G,17:58,0:01,A-1'); // end=17:59
+    const exactly = solve('Young,G,17:59,0:01,A-2'); // end=18:00 exactly
+    const after = solve('Young,G,17:58,0:03,A-3'); // end=18:01
+
+    expect(before).toBe('1200円');
+    expect(exactly).toBe('1200円'); // 18:00ちょうどはOK
+    expect(after).toBe('対象の映画の入場には大人の同伴が必要です');
+  });
+
+  it('[C9] 上映時間0分のエッジケース', () => {
+    const child = solve('Child,G,15:59,0:00,I-1'); // end=15:59
+    const young = solve('Young,G,17:59,0:00,A-1'); // end=17:59
+
+    expect(child).toBe('800円');
+    expect(young).toBe('1200円');
+  });
 });
