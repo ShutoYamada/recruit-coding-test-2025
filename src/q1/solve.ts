@@ -52,6 +52,20 @@ export const solve = (input: string): string => {
     tickets.push(t);
   }
 
+  // 同一上映であることを念のためチェック
+  if (!tickets.every((t) => t.rating === tickets[0].rating)) return '不正な入力です';
+  if (
+    !tickets.every(
+      (t) =>
+        t.startHH === tickets[0].startHH &&
+        t.startMM === tickets[0].startMM &&
+        t.durH === tickets[0].durH &&
+        t.durM === tickets[0].durM
+    )
+  ) {
+    return '不正な入力です';
+  }
+
   // セット属性（同一上映前提）
   const hasAdult = tickets.some((t) => t.age === 'Adult');
   const hasChild = tickets.some((t) => t.age === 'Child'); // C5 で使用（グループ規則）
@@ -86,7 +100,13 @@ export const solve = (input: string): string => {
     }
   }
 
-  // TODO 「全体不可」のときは価格を出さず、NG行の理由だけを出力する
+  // 全体不可のときは NG 行の理由のみ出力する
+  if (anyNg) {
+    return evaluated
+      .filter((e) => !e.ok)
+      .map((e) => e.text)
+      .join('\n');
+  }
 
   return evaluated.map((e) => e.text).join('\n');
 };
@@ -118,6 +138,14 @@ const parseLine = (line: string): Ticket | null => {
   const durM = parseInt(dur[2], 10);
   const row = seat[1].toUpperCase();
   const col = parseInt(seat[2], 10);
+
+  // 範囲チェック
+  if (startHH < 0 || startHH > 23) return null;
+  if (startMM < 0 || startMM > 59) return null;
+  if (durH < 0) return null;
+  if (durM < 0 || durM > 59) return null;
+  if (col < 1 || col > 24) return null;
+  if (row < 'A' || row > 'L') return null;
 
   return {
     age: ageRaw as Age,
