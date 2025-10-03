@@ -143,5 +143,79 @@ describe('Q2 core', () => {
   });
 
   // [C6] 出力順：date ASC, count DESC, path ASC の 決定的順序
+  it('Final order: date ASC → count DESC → path ASC', () => {
+    const lines = [
+      // 2025-01-01
+      '2025-01-01T00:00:00Z,u1,/b,200,100',
+      '2025-01-01T00:10:00Z,u2,/b,200,100', // /b count=2
+      '2025-01-01T00:20:00Z,u3,/a,200,100',
+      '2025-01-01T00:30:00Z,u4,/a,200,100', // /a count=2 (tie with /b)
+      '2025-01-01T01:00:00Z,u5,/c,200,100', // /c count=1
+      // 2025-01-02
+      '2025-01-02T00:00:00Z,u6,/c,200,100',
+      '2025-01-02T00:10:00Z,u7,/c,200,100',
+      '2025-01-02T00:20:00Z,u8,/c,200,100', // /c count=3
+      '2025-01-02T01:00:00Z,u9,/a,200,100', // /a count=1
+    ];
+    const out = aggregate(lines, {
+      from: '2025-01-01',
+      to: '2025-01-02',
+      tz: 'jst',
+      top: 3,
+    });
+    expect(out).toEqual([
+      // 2025-01-01: tie count=2 -> /a before /b
+      { date: '2025-01-01', path: '/a', count: 2, avgLatency: 100 },
+      { date: '2025-01-01', path: '/b', count: 2, avgLatency: 100 },
+      { date: '2025-01-01', path: '/c', count: 1, avgLatency: 100 },
+      // 2025-01-02
+      { date: '2025-01-02', path: '/c', count: 3, avgLatency: 100 },
+      { date: '2025-01-02', path: '/a', count: 1, avgLatency: 100 },
+    ]);
+  });
+
   // [C7] サンプル拡張：同一日複数パス/同数タイ/大きめデータ
+  it('[C7] 大規模パス数でも決定的順序と per-date Top-N を維持', () => {
+    const lines: string[] = [];
+    const makeDay = (date: string, prefix: string, paths: number) => {
+      const pad = (n: number) => String(n).padStart(4, '0');
+      for (let i = 0; i < paths; i++) {
+        const path = `${prefix}${pad(i)}`;
+        const hits = i < 10 ? 5 : 1; // 上位10パスだけヒット数を5件にしてTop-10を決定
+        for (let k = 0; k < hits; k++) {
+          const mm = String(k % 60).padStart(2, '0');
+          lines.push(
+            `${date}T00:${mm}:00Z,u-${date}-${i}-${k},${path},200,100`
+          );
+        }
+      }
+    };
+    // 1日あたり5,000パス（合計約10,080行）
+    makeDay('2025-01-20', '/p', 5000);
+    makeDay('2025-01-21', '/q', 5000);
+
+    const out = aggregate(lines, {
+      from: '2025-01-20',
+      to: '2025-01-21',
+      tz: 'ict',
+      top: 10,
+    });
+
+    // 期待: 各日付で prefix0000..0009 の10件が count=5 で選ばれ、
+    // 全体は date ASC → count DESC → path ASC の順で整列
+    const expectedDay1 = Array.from({ length: 10 }, (_, i) => ({
+      date: '2025-01-20',
+      path: `/p${String(i).padStart(4, '0')}`,
+      count: 5,
+      avgLatency: 100,
+    }));
+    const expectedDay2 = Array.from({ length: 10 }, (_, i) => ({
+      date: '2025-01-21',
+      path: `/q${String(i).padStart(4, '0')}`,
+      count: 5,
+      avgLatency: 100,
+    }));
+
+    expect(out).toEqual([...expectedDay1, ...expectedDay2]);
+  });
 });
