@@ -23,6 +23,13 @@ const MSG = {
   SEAT_LIMIT: '対象のチケットではその座席をご利用いただけません',
 } as const;
 
+// メッセージの優先順位
+const MSG_ORDER: Record<string, number> = {
+  [MSG.NEED_ADULT]: 0,
+  [MSG.AGE_LIMIT]: 1,
+  [MSG.SEAT_LIMIT]: 2,
+};
+
 /**
  * 仕様のポイント（READMEに準拠）:
  * - 各行ごとに OK なら価格、NG なら理由（カンマ区切り）。
@@ -202,8 +209,7 @@ const checkTimeRule = (
  * 理由の順序を安定化（README: 「同伴 → 年齢 → 座席」）
  */
 const orderReasons = (reasons: string[]): string[] => {
-  // TODO ここを実装
-  return reasons;
+  return reasons.sort((a, b) => MSG_ORDER[a] - MSG_ORDER[b]);
 };
 
 // 重複排除（stable）
