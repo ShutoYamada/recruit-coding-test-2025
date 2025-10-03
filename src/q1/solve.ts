@@ -116,7 +116,10 @@ export const solve = (input: string): string => {
  *  - startHH/startMM/durH/durM の範囲チェック（例: 23:59, 分は 0-59）
  *  - 座席の列番号 1-24 の範囲チェック
  *  - その他フォーマットの揺れ（必要なら）
+ *
+ *  不正な入力なら null を返す
  */
+// eslint-disable-next-line complexity
 const parseLine = (line: string): Ticket | null => {
   const parts = line.split(',').map((s) => s.trim());
   if (parts.length !== 5) return null;
@@ -138,6 +141,14 @@ const parseLine = (line: string): Ticket | null => {
   const row = seat[1].toUpperCase();
   const col = parseInt(seat[2], 10);
 
+  // 範囲チェック
+  if (startHH < 0 || startHH > 23) return null;
+  if (startMM < 0 || startMM > 59) return null;
+  if (durH < 0) return null;
+  if (durM < 0 || durM > 59) return null;
+  if (row < 'A' || row > 'L') return null;
+  if (col < 1 || col > 24) return null;
+
   return {
     age: ageRaw as Age,
     rating: ratingRaw as Rating,
@@ -150,6 +161,11 @@ const parseLine = (line: string): Ticket | null => {
   };
 };
 
+/**
+ * calcEndMinutes: チケットの終了時刻を分で返す（同日内）
+ *
+ * 日跨ぎは考慮しない (仕様より)
+ */
 const calcEndMinutes = (t: Ticket): number => {
   const start = t.startHH * 60 + t.startMM;
   const end = start + t.durH * 60 + t.durM;
