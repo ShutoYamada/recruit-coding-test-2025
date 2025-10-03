@@ -87,6 +87,12 @@ export const solve = (input: string): string => {
   }
 
   // TODO 「全体不可」のときは価格を出さず、NG行の理由だけを出力する
+  // セットに1枚でもNGがある→全体不可：価格を出さず、NG行の理由のみ出力
+  if (anyNg)
+    return evaluated
+      .filter((e) => e.ok === false)
+      .map((e) => e.text)
+      .join('\n');
 
   return evaluated.map((e) => e.text).join('\n');
 };
@@ -119,6 +125,13 @@ const parseLine = (line: string): Ticket | null => {
   const row = seat[1].toUpperCase();
   const col = parseInt(seat[2], 10);
 
+  // 範囲チェック
+  if (startHH < 0 || startHH > 23) return null;
+  if (startMM < 0 || startMM > 59) return null;
+  if (durH < 0) return null;
+  if (durM < 0 || durM > 59) return null;
+  if (col < 1 || col > 24) return null;
+
   return {
     age: ageRaw as Age,
     rating: ratingRaw as Rating,
@@ -149,7 +162,15 @@ const checkRating = (
   hasAdultInSet: boolean
 ): boolean => {
   // TODO ここを実装
-  return true;
+  switch (rating) {
+    case 'G':
+      return true;
+    case 'PG-12':
+      if (age === 'Child' && !hasAdultInSet) return false;
+      return true;
+    case 'R18+':
+      return age === 'Adult';
+  }
 };
 
 /**
@@ -158,6 +179,9 @@ const checkRating = (
  */
 const checkSeat = (t: Ticket): boolean => {
   // TODO ここを実装
+  if (t.age === 'Child') {
+    if (t.row === 'J' || t.row === 'K' || t.row === 'L') return false;
+  }
   return true;
 };
 
@@ -175,6 +199,11 @@ const checkTimeRule = (
   hasChildInSet: boolean
 ): boolean => {
   // TODO ここを実装
+  if (!hasAdultInSet) {
+    // Adult = 0
+    if (hasChildInSet) return !(endMinutes > 16 * 60); //Child && 16:00を超える
+    if (t.age === 'Young') return !(endMinutes > 18 * 60); // Young && 18:00を超える
+  }
   return true;
 };
 
@@ -182,8 +211,12 @@ const checkTimeRule = (
  * 理由の順序を安定化（README: 「同伴 → 年齢 → 座席」）
  */
 const orderReasons = (reasons: string[]): string[] => {
-  // TODO ここを実装
-  return reasons;
+  const priority: Record<string, number> = {
+    [MSG.NEED_ADULT]: 0,
+    [MSG.AGE_LIMIT]: 1,
+    [MSG.SEAT_LIMIT]: 2,
+  };
+  return [...reasons].sort((a, b) => (priority[a] ?? 99) - (priority[b] ?? 99));
 };
 
 // 重複排除（stable）
