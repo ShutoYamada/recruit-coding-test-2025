@@ -1,3 +1,5 @@
+// src/q2/core.ts
+
 type TZ = 'jst' | 'ict';
 
 export type Row = {

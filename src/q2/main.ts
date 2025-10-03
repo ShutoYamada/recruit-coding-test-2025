@@ -1,3 +1,5 @@
+// src/q2/main.ts
+
 import { createReadStream } from 'node:fs';
 import { argv, stdout } from 'node:process';
 import { createInterface } from 'node:readline';
