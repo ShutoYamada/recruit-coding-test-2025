@@ -87,7 +87,13 @@ export const solve = (input: string): string => {
   }
 
   // TODO 「全体不可」のときは価格を出さず、NG行の理由だけを出力する
-
+  if (anyNg) {
+    // セット内に1枚でもNGがあれば、OK行も含めて価格は出さず、NG行の理由だけを出力
+    return evaluated
+      .filter((e) => !e.ok) // NG行のみ
+      .map((e) => e.text)
+      .join('\n');
+  }
   return evaluated.map((e) => e.text).join('\n');
 };
 
@@ -164,7 +170,7 @@ const checkRating = (
     return true;
   }
   if (rating === 'R18+') {
-    return age === 'Adult'; // Adult 以外は不可
+    return (age === 'Adult'); // Adult 以外は不可
   }
   return false;
 };
@@ -209,7 +215,17 @@ const checkTimeRule = (
  * 理由の順序を安定化（README: 「同伴 → 年齢 → 座席」）
  */
 const orderReasons = (reasons: string[]): string[] => {
+  // 優先順位の定義（同伴必要 → 年齢制限 → 座席制限）
   // TODO ここを実装
+  const priority = [MSG.NEED_ADULT, MSG.AGE_LIMIT, MSG.SEAT_LIMIT];
+
+  // reasonsを変更して正しい順序に並び替え
+  reasons.sort((a, b) => {
+    const indexA = priority.indexOf(a as any);
+    const indexB = priority.indexOf(b as any);
+    return indexA - indexB;
+  });
+
   return reasons;
 };
 
