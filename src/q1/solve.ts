@@ -212,12 +212,12 @@ const checkTimeRule = (
   if (t.age === 'Child') {
     return ticketEndMinutes <= 16 * 60; // Child は 16:00 超えNG
   }
-  
+
   if (t.age === 'Young') {
     return ticketEndMinutes <= 18 * 60; // Young は 18:00 超えNG
   }
 
-  return true; // Adult がいれば常にOK
+  return true; 
 };
 
 /**
@@ -225,7 +225,9 @@ const checkTimeRule = (
  */
 const orderReasons = (reasons: string[]): string[] => {
   // TODO ここを実装
-  return reasons;
+  // README の順序に合わせてフィルタリング
+  const order = [MSG.NEED_ADULT, MSG.AGE_LIMIT, MSG.SEAT_LIMIT];
+  return order.filter((msg) => reasons.includes(msg));
 };
 
 // 重複排除（stable）
