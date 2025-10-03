@@ -33,25 +33,43 @@ export const aggregate = (lines: string[], opt: Options): Output => {
 export const parseLines = (lines: string[]): Row[] => {
   const out: Row[] = [];
   for (const line of lines) {
-    const [timestamp, userId, path, status, latencyMs] = line.split(',');
-    if (!timestamp || !userId || !path || !status || !latencyMs) continue; // 壊れ行はスキップ
+    const parts = line.split(',').map((s) => s.trim());
+    if (parts.length < 5) continue;
+
+    const [timestamp, userId, path, statusStr, latencyStr] = parts;
+
+    // ヘッダー行をスキップ
+    if (timestamp.toLowerCase() === 'timestamp') continue;
+
+    // 空チェック
+    if (!timestamp || !userId || !path || !statusStr || !latencyStr) continue;
+
+    // 数値チェック
+    const status = Number(statusStr);
+    const latencyMs = Number(latencyStr);
+    if (!Number.isFinite(status) || !Number.isFinite(latencyMs)) continue;
+
+    // 日付チェック
+    const t = Date.parse(timestamp);
+    if (!Number.isFinite(t)) continue;
+
     out.push({
-      timestamp: timestamp.trim(),
-      userId: userId.trim(),
-      path: path.trim(),
-      status: Number(status),
-      latencyMs: Number(latencyMs),
+      timestamp: new Date(t).toISOString(), // 正規化
+      userId,
+      path,
+      status,
+      latencyMs,
     });
   }
   return out;
 };
 
 const filterByDate = (rows: Row[], from: string, to: string): Row[] => {
-  const fromT = Date.parse(from + 'T00:00:00Z');
-  const toT = Date.parse(to + 'T23:59:59Z');
+  const fromT = Date.parse(`${from}T00:00:00.000Z`);
+  const toT = Date.parse(`${to}T23:59:59.999Z`);
   return rows.filter((r) => {
     const t = Date.parse(r.timestamp);
-    return t >= fromT && t <= toT;
+    return Number.isFinite(t) && t >= fromT && t <= toT;
   });
 };
 
@@ -85,19 +103,21 @@ const rankTop = (
   items: { date: string; path: string; count: number; avgLatency: number }[],
   top: number
 ) => {
-  // 日付ごとに件数順で上位N
+  // 日付ごとにまとめる
   const byDate = new Map<string, typeof items>();
   for (const it of items) {
     const arr = byDate.get(it.date) || [];
     arr.push(it);
     byDate.set(it.date, arr);
   }
+
   const out: typeof items = [];
   for (const [, arr] of byDate) {
     arr.sort((a, b) => b.count - a.count || a.path.localeCompare(b.path));
     out.push(...arr.slice(0, top));
   }
-  // 安定した出力順: date ASC, count DESC
+
+  // 全体を決定的順序でソート
   out.sort(
     (a, b) =>
       a.date.localeCompare(b.date) ||
@@ -105,4 +125,4 @@ const rankTop = (
       a.path.localeCompare(b.path)
   );
   return out;
-};
+}
