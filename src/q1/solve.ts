@@ -177,7 +177,12 @@ const checkRating = (
  */
 const checkSeat = (t: Ticket): boolean => {
   // TODO ここを実装
-  return true;
+  if (t.age === 'Child') {
+    // J〜L は Child 不可
+    return !['J', 'K', 'L'].includes(t.row);
+  }
+  
+  return true; // Adult/Young: 座席制限なし
 };
 
 /**
