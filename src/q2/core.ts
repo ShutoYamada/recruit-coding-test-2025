@@ -68,10 +68,12 @@ export const parseLines = (lines: string[]): Row[] => {
 
 const filterByDate = (rows: Row[], from: string, to: string): Row[] => {
   const fromT = Date.parse(from + 'T00:00:00Z');
-  const toT = Date.parse(to + 'T23:59:59Z');
+  const toStart = Date.parse(to + 'T00:00:00Z');
+  const oneDayMs = 24 * 60 * 60 * 1000;
+  const toExclusive = toStart + oneDayMs; // [from, to+1day) の半開区間
   return rows.filter((r) => {
     const t = Date.parse(r.timestamp);
-    return t >= fromT && t <= toT;
+    return t >= fromT && t < toExclusive;
   });
 };
 
