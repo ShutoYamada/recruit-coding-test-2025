@@ -52,6 +52,18 @@ export const solve = (input: string): string => {
     tickets.push(t);
   }
 
+  // セット属性（同一上映前提）: 全行は同一上映と仮定されているが念のため rating/start をチェック
+  if (!tickets.every((t) => t.rating === tickets[0].rating)) return '不正な入力です';
+  if (
+    !tickets.every(
+      (t) => t.startHH === tickets[0].startHH && t.startMM === tickets[0].startMM && t.durH === tickets[0].durH && t.durM === tickets[0].durM
+    )
+  ) {
+    // テストでは "同時購入は同一作品のみ（行間で上映時刻・レーティングは一致している前提）" とあるため、
+    // 異なる場合は不正入力扱いにする（問題文にもよるがテストに合わせる）
+    return '不正な入力です';
+  }
+
   // セット属性（同一上映前提）
   const hasAdult = tickets.some((t) => t.age === 'Adult');
   const hasChild = tickets.some((t) => t.age === 'Child'); // C5 で使用（グループ規則）
@@ -87,7 +99,14 @@ export const solve = (input: string): string => {
   }
 
   // TODO 「全体不可」のときは価格を出さず、NG行の理由だけを出力する
+  // 全体不可: 1枚でもNGがあれば「全体不可」-> 価格を出さずNG行だけを出力 (入力順)
+  if (anyNg) {
+    // NG行だけ取り出して改行で返す（テストの要件: NG行のみを出力）
+    const ngLines = evaluated.filter((e) => !e.ok).map((e) => e.text);
+    return ngLines.join('\n');
+  }
 
+  // 全てOKなら各行の価格を改行で返す
   return evaluated.map((e) => e.text).join('\n');
 };
 
