@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { filterByDate, parseLines, toTZDate, groupByDatePath } from './core.js';
+import { filterByDate, parseLines, toTZDate, groupByDatePath, rankTop } from './core.js';
 
 describe('Q2 core', () => {
   /**
@@ -87,6 +87,24 @@ describe('Q2 core', () => {
     );
     expect(orders0404?.count).toBe(1);
     expect(orders0404?.avgLatency).toBe(120)
+  })
+
+  it('rankTop: selects top N per date and sorts output', () => {
+    const items = [
+      { date: '2025-01-01', path: '/b', count: 10, avgLatency: 100 },
+      { date: '2025-01-01', path: '/a', count: 10, avgLatency: 120 },
+      { date: '2025-01-01', path: '/c', count: 5, avgLatency: 130 },
+      { date: '2025-01-02', path: '/z', count: 20, avgLatency: 200 },
+      { date: '2025-01-02', path: '/y', count: 15, avgLatency: 180 },
+      { date: '2025-01-02', path: '/x', count: 15, avgLatency: 170 },
+    ]
+
+    const ranked = rankTop(items, 2)
+    expect(ranked.length).toBe(4)
+
+    expect(ranked.filter(r => r.date === '2025-01-01').map(r => r.path)).toEqual(['/a', '/b']) // /a before /b due to avgLatency
+
+    expect(ranked.filter(r => r.date === '2025-01-02').map(r => r.path)).toEqual(['/z', '/x']) // sorted by count desc
   })
 
   // it.todo('aggregate basic');
