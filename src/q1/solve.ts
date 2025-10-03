@@ -182,7 +182,7 @@ const checkRating = (
  */
 
 /**
- * 
+ *
  * @param t - チケット情報 / Ticket info
  * @returns true=利用可 / allowed, false=利用不可 / not allowed
  */
@@ -200,13 +200,34 @@ const checkSeat = (t: Ticket): boolean => {
  *  - Adult が 0 で Young 単独など、終了が 18:00 を超える Young は NG
  *  - ちょうど 16:00/18:00 は OK
  */
+/**
+ *
+ * @param t - チケット情報 / Ticket info
+ * @param endMinutes - 終了時刻（分） / End time (in minutes)
+ * @param hasAdultInSet - 購入セットに Adult が含まれるか / Whether the ticket set includes an Adult
+ * @param hasChildInSet - 購入セットに Child が含まれるか / Whether the ticket set includes a Child
+ * @returns true=利用可 / allowed, false=利用不可 / not allowed
+ */
 const checkTimeRule = (
   t: Ticket,
   endMinutes: number,
   hasAdultInSet: boolean,
   hasChildInSet: boolean
 ): boolean => {
-  // TODO ここを実装
+  // Adult がいれば常にOK / Always allowed if there's an Adult
+  if (hasAdultInSet) return true
+
+  // Adult が 0 かつ Child を含み、終了が 16:00 を超える -> Young も含め全員 NG
+  if (hasChildInSet && endMinutes > 16 * 60) {
+    return false
+  }
+
+  // Adult が 0 で Young 単独など、終了が 18:00 を超える Young は NG
+  if (t.age === 'Young' && endMinutes > 18 * 60) {
+    return false
+  }
+
+  // それ以外は OK / Otherwise, it's allowed
   return true;
 };
 
