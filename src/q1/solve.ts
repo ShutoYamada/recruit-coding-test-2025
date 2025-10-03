@@ -60,6 +60,7 @@ export const solve = (input: string): string => {
   // セット属性（同一上映前提）/ Set of attributes (assuming group tickets share the same screening)
   const hasAdult = tickets.some((t) => t.age === 'Adult');
   const hasChild = tickets.some((t) => t.age === 'Child'); // C5 で使用（グループ規則）
+  const hasYoung = tickets.some((t) => t.age === 'Young');
   const rating = tickets[0].rating;
   const endMinutes = calcEndMinutes(tickets[0]); // 今年は日跨ぎなし前提
 
@@ -71,7 +72,7 @@ export const solve = (input: string): string => {
     const reasons: string[] = [];
 
     // 理由の push 順は README の順序に合わせておく（後で orderReasons で厳密化）/ Push reasons in the order specified in README (will refine with orderReasons later)
-    if (!checkTimeRule(t, endMinutes, hasAdult, hasChild)) {
+    if (!checkTimeRule(t, endMinutes, hasAdult, hasChild, hasYoung)) {
       reasons.push(MSG.NEED_ADULT);
     }
     if (!checkRating(t.age, rating, hasAdult)) {
@@ -213,18 +214,47 @@ const checkSeat = (t: Ticket): boolean => {
 
 /**
  * 時刻の規則（終了時刻ベース）
- *  - Adult がいれば常にOK
- *  - Adult が 0 かつ Child を含み、終了が 16:00 を超える → Young も含め全員 NG
- *  - Adult が 0 で Young 単独など、終了が 18:00 を超える Young は NG
- *  - ちょうど 16:00/18:00 は OK
+ * - Adult がいれば常にOK /  If there's an Adult, always OK
+ * - Adult が 0 かつ Child を含み、終了が 16:00 を超える → Young も含め全員 NG / If no Adult and includes Child, and end time exceeds 16:00 → all including Young are NG
+ * - Adult が 0 で Young 単独など、終了が 18:00 を超える Young は NG / If no Adult and only Young, end time exceeding 18:00 → Young is NG
+ * - ちょうど 16:00/18:00 は OK / Exactly 16:00/18:00 is OK
  */
 const checkTimeRule = (
   t: Ticket,
   endMinutes: number,
   hasAdultInSet: boolean,
-  hasChildInSet: boolean
+  hasChildInSet: boolean,
+  hasYoungInSet: boolean
 ): boolean => {
-  // TODO ここを実装
+  // Adult がいる場合は常にOK / If there's an Adult, always OK
+  if (hasAdultInSet) {
+    return true;
+  }
+
+  // Adult がいない場合 / If no Adult in the group
+  const end16 = 16 * 60; // 16:00 = 960分
+  const end18 = 18 * 60; // 18:00 = 1080分
+
+  // Child を含むグループで終了が 16:00 を超える場合 -> NG / If the group includes a child and the end time is later than 16:00 -> NG
+  if (hasChildInSet && endMinutes > end16) {
+    return false;
+  }
+
+  // Young を含むとChildがいないグループで終了が 18:00 を超える場合 -> NG / If the group includes Young but no Child and the end time is later than 18:00 -> NG
+  if (!hasChildInSet && hasYoungInSet && endMinutes > end18) {
+    return false;
+  }
+
+  // Young で終了が 18:00 を超える場合 -> NG / If only Young and the end time is later than 18:00 -> NG
+  if (t.age === 'Young' && endMinutes > end18) {
+    return false;
+  }
+
+  // Child で終了が 16:00 を超える場合 -> NG / If only Child and the end time is later than 16:00 -> NG
+  if (t.age === 'Child' && endMinutes > end16) {
+    return false;
+  }
+
   return true;
 };
 
