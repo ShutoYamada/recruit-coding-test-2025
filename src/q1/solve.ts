@@ -177,6 +177,8 @@ const calcEndMinutes = (t: Ticket): number => {
  *  - G: 誰でも可
  *  - PG-12: Child は Adult 同時購入がなければ不可
  *  - R18+: Adult 以外は不可
+ *
+ *  条件を満たす場合 true を返す
  */
 const checkRating = (
   age: Age,
@@ -184,15 +186,31 @@ const checkRating = (
   hasAdultInSet: boolean
 ): boolean => {
   // TODO ここを実装
-  return true;
+  if (rating === 'G') return true;
+  if (rating === 'PG-12') {
+    // Child は Adult 同時購入がないと不可
+    if (age === 'Child' && !hasAdultInSet) return false;
+    return true;
+  }
+  // R18+
+  if (rating === 'R18+') {
+    return age === 'Adult';
+  }
+  return false;
 };
 
 /**
  * 座席の規則
  *  - J〜L は Child 不可
+ *  - Child が J/K/L 行にいる場合は false
  */
 const checkSeat = (t: Ticket): boolean => {
   // TODO ここを実装
+  if (t.age === 'Child') {
+    if (t.row === 'J' || t.row === 'K' || t.row === 'L') {
+      return false;
+    }
+  }
   return true;
 };
 
@@ -202,6 +220,7 @@ const checkSeat = (t: Ticket): boolean => {
  *  - Adult が 0 かつ Child を含み、終了が 16:00 を超える → Young も含め全員 NG
  *  - Adult が 0 で Young 単独など、終了が 18:00 を超える Young は NG
  *  - ちょうど 16:00/18:00 は OK
+ *  - 同伴が必要でない（OK）なら true を返す
  */
 const checkTimeRule = (
   t: Ticket,
@@ -210,15 +229,51 @@ const checkTimeRule = (
   hasChildInSet: boolean
 ): boolean => {
   // TODO ここを実装
+  if (hasAdultInSet) return true; // Adult がいれば同伴のチェックは不要
+
+   // 終了時刻の閾値（分単位）
+  const MIN_16 = 16 * 60; // 960
+  const MIN_18 = 18 * 60; // 1080
+
+  // セットに Child を含み、終了が 16:00 を超える場合: Young も含めて全員 NG
+  if (hasChildInSet && endMinutes > MIN_16) {
+    return false;
+  }
+
+  // Young 単独 (または Child がいないが Young がいる) で終了が 18:00 を超える場合 NG
+  if (t.age === 'Young' && endMinutes > MIN_18) {
+    return false;
+  }
+
+  // Child 単独で終了 > 16:00 の場合 NG（既に上で hasChildInSet かどうか判定しているが、
+  // 個別にも判定しておく）
+  if (t.age === 'Child' && endMinutes > MIN_16) {
+    return false;
+  }
+
   return true;
 };
 
 /**
  * 理由の順序を安定化（README: 「同伴 → 年齢 → 座席」）
+ *
  */
 const orderReasons = (reasons: string[]): string[] => {
   // TODO ここを実装
-  return reasons;
+  const order = [MSG.NEED_ADULT, MSG.AGE_LIMIT, MSG.SEAT_LIMIT];
+  // stable にソート (理由が存在する順序を保持しつつ優先度順に整列)
+  // ここでは優先度配列に基づいて filter することで実装（順序は固定）
+  const out: string[] = [];
+  for (const key of order) {
+    for (const r of reasons) {
+      if (r === key) out.push(r);
+    }
+  }
+  // 他の理由があれば末尾に（テストケースにはないが安全措置）
+  for (const r of reasons) {
+    if (!out.includes(r)) out.push(r);
+  }
+  return out;
 };
 
 // 重複排除（stable）
