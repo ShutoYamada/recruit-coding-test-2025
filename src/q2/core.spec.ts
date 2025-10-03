@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { filterByDate, parseLines } from './core.js';
+import { filterByDate, parseLines, toTZDate } from './core.js';
 
 describe('Q2 core', () => {
   /**
@@ -38,6 +38,22 @@ describe('Q2 core', () => {
     expect(filtered.map((r) => r.path)).toEqual(['/a', '/b', '/c'])
   })
 
+  /**
+   * -----------------
+   * toTZDate
+   * -----------------
+   */
+  it('toTZDate: converts UTC to JST correctly (UTC+9)', () => {
+    // UTC 2025-01-01 18:00 -> JST 2025-01-02
+    const date = toTZDate('2025-01-01T18:00:00Z', 'jst')
+    expect(date).toBe('2025-01-02')
+  });
+
+  it('toTZDate: converts UTC to ICT correctly (UTC+7)', () => {
+    // UTC 2025-01-01 20:00 -> ICT 2025-01-02
+    const date = toTZDate('2025-01-01T20:00:00Z', 'ict')
+    expect(date).toBe('2025-01-02')
+  });
 
   // it.todo('aggregate basic');
 });
