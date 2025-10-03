@@ -85,7 +85,63 @@ describe('Q2 core', () => {
   });
 
   // [C4] 集計：date×path の件数・平均が合う
+  it('Grouping & avgLatency rounding works on same date×path', () => {
+    const lines = [
+      '2025-01-03T10:00:00Z,u1,/a,200,100',
+      '2025-01-03T10:10:00Z,u2,/a,200,101',
+      '2025-01-03T10:20:00Z,u3,/a,200,102',
+      '2025-01-03T11:00:00Z,u4,/b,200,100',
+      '2025-01-03T11:10:00Z,u5,/b,200,101',
+    ];
+    const out = aggregate(lines, {
+      from: '2025-01-03',
+      to: '2025-01-03',
+      tz: 'jst',
+      top: 10,
+    });
+    // Two entries: /a count=3 avg=101, /b count=2 avg=101
+    const a = out.find((r) => r.path === '/a');
+    const b = out.find((r) => r.path === '/b');
+    expect(a).toEqual({
+      date: '2025-01-03',
+      path: '/a',
+      count: 3,
+      avgLatency: 101,
+    });
+    expect(b).toEqual({
+      date: '2025-01-03',
+      path: '/b',
+      count: 2,
+      avgLatency: 101,
+    });
+  });
+
   // [C5] 上位N：日付ごとに count 降順、同数は path 昇順
+  it('Top-N by date with path tie-break (count desc, path asc)', () => {
+    const lines = [
+      '2025-01-05T00:00:00Z,u1,/a,200,100',
+      '2025-01-05T00:10:00Z,u2,/a,200,100',
+      '2025-01-05T00:20:00Z,u3,/a,200,100', // /a count=3
+      '2025-01-05T01:00:00Z,u4,/b,200,100',
+      '2025-01-05T01:10:00Z,u5,/b,200,100',
+      '2025-01-05T01:20:00Z,u6,/b,200,100', // /b count=3 (tie with /a)
+      '2025-01-05T02:00:00Z,u7,/c,200,100',
+      '2025-01-05T02:10:00Z,u8,/c,200,100', // /c count=2
+      '2025-01-05T03:00:00Z,u9,/d,200,100', // /d count=1
+    ];
+    const out = aggregate(lines, {
+      from: '2025-01-05',
+      to: '2025-01-05',
+      tz: 'ict', // any tz is fine; all same day
+      top: 2,
+    });
+    // Per date top-2 should be /a and /b; when tie, /a comes before /b
+    expect(out).toEqual([
+      { date: '2025-01-05', path: '/a', count: 3, avgLatency: 100 },
+      { date: '2025-01-05', path: '/b', count: 3, avgLatency: 100 },
+    ]);
+  });
+
   // [C6] 出力順：date ASC, count DESC, path ASC の 決定的順序
   // [C7] サンプル拡張：同一日複数パス/同数タイ/大きめデータ
 });
