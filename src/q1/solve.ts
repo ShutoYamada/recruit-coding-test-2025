@@ -185,7 +185,14 @@ const checkTimeRule = (
   hasAdultInSet: boolean,
   hasChildInSet: boolean
 ): boolean => {
-  // TODO ここを実装
+  if(hasAdultInSet) return true;  
+  /** 
+   * endMinutes = 0:00 からの経過分数
+   * 16 * 60 = 16:00
+   * 18 * 60 = 18:00
+   */
+  if(hasChildInSet && endMinutes > 16 * 60) return false;
+  if(endMinutes > 18 * 60) return false;
   return true;
 };
 
