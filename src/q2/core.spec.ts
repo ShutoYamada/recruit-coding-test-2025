@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { filterByDate, parseLines, toTZDate } from './core.js';
+import { filterByDate, parseLines, toTZDate, groupByDatePath } from './core.js';
 
 describe('Q2 core', () => {
   /**
@@ -21,7 +21,7 @@ describe('Q2 core', () => {
 
   /**
    * -----------------
-   * filterByDate
+   * filterByDate tests
    * -----------------
    */
   it('filterByDate: keeps only rows within inclusive date range', () => {
@@ -40,7 +40,7 @@ describe('Q2 core', () => {
 
   /**
    * -----------------
-   * toTZDate
+   * toTZDate tests
    * -----------------
    */
   it('toTZDate: converts UTC to JST correctly (UTC+9)', () => {
@@ -54,6 +54,40 @@ describe('Q2 core', () => {
     const date = toTZDate('2025-01-01T20:00:00Z', 'ict')
     expect(date).toBe('2025-01-02')
   });
+
+  /**
+   * -----------------------
+   * groupByDatePath tests
+   * -----------------
+   */
+  it('groupByDatePath: groups rows by date and path with avg latency', () => {
+    const rows = parseLines([
+      '2025-01-03T10:00:00Z,u1,/api/orders,200,100',
+      '2025-01-03T11:00:00Z,u2,/api/orders,200,200',
+      '2025-01-03T12:00:00Z,u3,/api/users,200,150',
+      '2025-01-04T01:00:00Z,u4,/api/orders,200,120',
+    ])
+
+    const grouped = groupByDatePath(rows, 'jst')
+
+    const orders0303 = grouped.find(
+      (g) => g.date === '2025-01-03' && g.path === '/api/orders'
+    )
+    expect(orders0303?.count).toBe(2)
+    expect(orders0303?.avgLatency).toBe(150) // (100+200)/2
+
+    const users0303 = grouped.find(
+      (g) => g.date === '2025-01-03' && g.path === '/api/users'
+    )
+    expect(users0303?.count).toBe(1)
+    expect(users0303?.avgLatency).toBe(150)
+
+    const orders0404 = grouped.find(
+      (g) => g.date === '2025-01-04' && g.path === '/api/orders'
+    );
+    expect(orders0404?.count).toBe(1);
+    expect(orders0404?.avgLatency).toBe(120)
+  })
 
   // it.todo('aggregate basic');
 });
