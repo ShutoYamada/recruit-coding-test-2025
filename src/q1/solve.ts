@@ -87,6 +87,14 @@ export const solve = (input: string): string => {
   }
 
   // TODO 「全体不可」のときは価格を出さず、NG行の理由だけを出力する
+  //  - anyNg が true のとき
+  //  - evaluated のうち ok: false の行だけを抽出して text を改行で連結
+  if (anyNg) {
+    return evaluated
+      .filter((e) => !e.ok)
+      .map((e) => e.text)
+      .join('\n');
+  }
 
   return evaluated.map((e) => e.text).join('\n');
 };
@@ -119,6 +127,13 @@ const parseLine = (line: string): Ticket | null => {
   const row = seat[1].toUpperCase();
   const col = parseInt(seat[2], 10);
 
+  // 最小限のバリデーション
+  if (startHH < 0 || startHH > 23) return null;  // 時間: 0-23
+  if (startMM < 0 || startMM > 59) return null;  // 分: 0-59
+  if (durM >= 60) return null;                   // 上映時間の分: 0-59
+  if (col < 1 || col > 24) return null;          // 座席番号: 1-24
+
+
   return {
     age: ageRaw as Age,
     rating: ratingRaw as Rating,
@@ -149,7 +164,19 @@ const checkRating = (
   hasAdultInSet: boolean
 ): boolean => {
   // TODO ここを実装
-  return true;
+
+  // PG-12: Adult 同時購入がなければ Child は不可
+  if (rating === 'PG-12') {
+    if (age === 'Adult' || age ==='Young' ) return true;
+    return hasAdultInSet; // Child の場合、Adult 同時購入があれば可
+  }
+
+  // R18+: Adult 以外は不可
+  if (rating === 'R18+') {
+    return age === 'Adult';
+  } 
+
+  return true;  // G rating: 誰でもOK
 };
 
 /**
@@ -158,7 +185,12 @@ const checkRating = (
  */
 const checkSeat = (t: Ticket): boolean => {
   // TODO ここを実装
-  return true;
+  if (t.age === 'Child') {
+    // J〜L は Child 不可
+    return !['J', 'K', 'L'].includes(t.row);
+  }
+
+  return true; // Adult/Young: 座席制限なし
 };
 
 /**
@@ -175,7 +207,25 @@ const checkTimeRule = (
   hasChildInSet: boolean
 ): boolean => {
   // TODO ここを実装
-  return true;
+ 
+  // Adult は時刻制限なし
+  if (t.age === 'Adult') return true;
+  
+  // Adult がいれば時刻制限なし
+  if (hasAdultInSet) return true;
+
+  // 個別チケットの終了時刻を計算
+  const ticketEndMinutes = calcEndMinutes(t);
+
+  if (t.age === 'Child' || (hasChildInSet && t.age === 'Young')) {
+    return ticketEndMinutes <= 16 * 60; // Child または Child 同伴の Young は 16:00 超えNG
+  }
+
+  if (t.age === 'Young') {
+    return ticketEndMinutes <= 18 * 60; // Young は 18:00 超えNG
+  }
+
+  return true; 
 };
 
 /**
@@ -183,7 +233,9 @@ const checkTimeRule = (
  */
 const orderReasons = (reasons: string[]): string[] => {
   // TODO ここを実装
-  return reasons;
+  // README の順序に合わせてフィルタリング
+  const order = [MSG.NEED_ADULT, MSG.AGE_LIMIT, MSG.SEAT_LIMIT];
+  return order.filter((msg) => reasons.includes(msg));
 };
 
 // 重複排除（stable）
