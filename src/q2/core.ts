@@ -70,12 +70,15 @@ export const parseLines = (lines: string[]): Row[] => {
   }
   return out;
 };
-const filterByDate = (rows: Row[], from: string, to: string): Row[] => {
-  const fromT = Date.parse(from + 'T00:00:00Z');
-  const toT = Date.parse(to + 'T23:59:59Z');
+export const filterByDate = (rows: Row[], from: string, to: string): Row[] => {
+  // 開始日をその日の00:00:00のタイムスタンプに変換する
+  const fromTime = new Date(`${from}T00:00:00.000Z`).getTime();
+  // 終了日をその日の23:59:59.999のタイムスタンプに変換して、その日全体を含める
+  const toTime = new Date(`${to}T23:59:59.999Z`).getTime();
   return rows.filter((r) => {
-    const t = Date.parse(r.timestamp);
-    return t >= fromT && t <= toT;
+    const t = new Date(r.timestamp).getTime();
+    // タイムスタンプが範囲内にある行を保持する
+    return t >= fromTime && t <= toTime;
   });
 };
 

@@ -35,4 +35,12 @@ export default [
       'no-unused-vars': 0,
     },
   },
+
+  // Test files: allow longer functions (many assertions per case)
+  {
+    files: ['**/*.spec.ts', '**/*.test.ts'],
+    rules: {
+      'max-lines-per-function': 'off',
+    },
+  },
 ];
