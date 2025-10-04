@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { Row } from './core.js';
-import { filterByDate, groupByDatePath, parseLines, toTZDate } from './core.js';
+import {
+  filterByDate,
+  groupByDatePath,
+  parseLines,
+  rankTop,
+  toTZDate,
+} from './core.js';
 describe('Q2 Core Logic', () => {
   describe('parseLines', () => {
     it('should parse valid lines correctly', () => {
@@ -261,6 +267,38 @@ describe('Q2 Core Logic', () => {
         count: 1,
         avgLatency: 300,
       });
+    });
+  });
+  describe('rankTop', () => {
+    it('should rank top N for each day and then sort the final result', () => {
+      // 1. Arrange: Prepare sample grouped data
+      const groupedItems = [
+        // Data for Jan 04 (unsorted)
+        { date: '2025-01-04', path: '/api/c-path', count: 10, avgLatency: 100 },
+        { date: '2025-01-04', path: '/api/a-path', count: 30, avgLatency: 100 },
+        { date: '2025-01-04', path: '/api/b-path', count: 20, avgLatency: 100 },
+        // Data for Jan 03 (to test date sorting)
+        { date: '2025-01-03', path: '/api/z-path', count: 50, avgLatency: 100 },
+        { date: '2025-01-03', path: '/api/y-path', count: 5, avgLatency: 100 },
+        // Data for tie-breaking (equal counts)
+        { date: '2025-01-04', path: '/api/x-tie', count: 30, avgLatency: 100 },
+      ];
+
+      // 2. Act: Call rankTop with top=2
+      const result = rankTop(groupedItems, 2);
+
+      // 3. Assert: Verify the final result
+      expect(result).toEqual([
+        // Jan 03 should come first
+        { date: '2025-01-03', path: '/api/z-path', count: 50, avgLatency: 100 },
+        { date: '2025-01-03', path: '/api/y-path', count: 5, avgLatency: 100 },
+
+        // Jan 04 comes next, and only top 2 are taken
+        // /api/a-path and /api/x-tie both have count=30, so 'a' comes before 'x'
+        { date: '2025-01-04', path: '/api/a-path', count: 30, avgLatency: 100 },
+        { date: '2025-01-04', path: '/api/x-tie', count: 30, avgLatency: 100 },
+        // /api/b-path (count=20) and /api/c-path (count=10) were discarded
+      ]);
     });
   });
 });
