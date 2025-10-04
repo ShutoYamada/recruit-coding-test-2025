@@ -108,9 +108,11 @@ pnpm q2:run --file=src/q2/sample.csv --from=2025-01-01 --to=2025-01-31 --tz=jst 
 [{"date":"2025-01-03","path":"/api/orders","count":2,"avgLatency":150},{"date":"2025-01-03","path":"/api/users","count":1,"avgLatency":90},{"date":"2025-01-04","path":"/api/orders","count":1,"avgLatency":110}]
 ```
 
-### 6. Dockerの確認
+### 6. Dockerセットアップと動作確認
 
-#### Dockerバージョンの確認
+#### Docker環境の確認
+
+Docker Desktopが起動していることを確認：
 
 ```powershell
 docker version
@@ -126,21 +128,39 @@ Server: Docker Desktop 4.47.0 (206054)
   Version:          28.4.0
 ```
 
-#### Dockerイメージのビルド
+#### Multi-stage Dockerイメージのビルド
+
+プロジェクトルートで以下のコマンドを実行：
 
 ```powershell
-docker build -t recruit-assignments-2025 .
+docker build -t recruit-q2-2025 .
 ```
+
+**ビルドプロセスの説明：**
+1. **Builder Stage**: 依存関係インストール → TypeScriptビルド → 本番依存関係準備
+2. **Runtime Stage**: 軽量な実行環境にビルド成果物のみコピー
 
 期待される出力（最終行）：
 ```
-=> => naming to docker.io/library/recruit-assignments-2025:latest
+=> => naming to docker.io/library/recruit-q2-2025:latest
+```
+
+#### Dockerイメージサイズの確認
+
+```powershell
+docker images recruit-q2-2025
+```
+
+期待される出力例：
+```
+REPOSITORY        TAG       IMAGE ID       CREATED          SIZE
+recruit-q2-2025   latest    abc123def456   2 minutes ago    200MB
 ```
 
 #### DockerでQ2実行テスト
 
 ```powershell
-docker run --rm -v "${PWD}/src/q2:/data" recruit-assignments-2025 --file=/data/sample.csv --from=2025-01-01 --to=2025-01-31 --tz=jst --top=3
+docker run --rm -v "${PWD}/src/q2:/data" recruit-q2-2025 --file=/data/sample.csv --from=2025-01-01 --to=2025-01-31 --tz=jst --top=3
 ```
 
 期待される出力：
@@ -148,8 +168,50 @@ docker run --rm -v "${PWD}/src/q2:/data" recruit-assignments-2025 --file=/data/s
 [{"date":"2025-01-03","path":"/api/orders","count":2,"avgLatency":150},{"date":"2025-01-03","path":"/api/users","count":1,"avgLatency":90},{"date":"2025-01-04","path":"/api/orders","count":1,"avgLatency":110}]
 ```
 
+#### Dockerでの応用的な使用例
+
+**タイムゾーンICTでの実行：**
+```powershell
+docker run --rm -v "${PWD}/src/q2:/data" recruit-q2-2025 --file=/data/sample.csv --from=2025-01-01 --to=2025-01-31 --tz=ict --top=5
+```
+
+**カスタムCSVファイルでの実行：**
+```powershell
+# 1. カスタムCSVファイルを準備（例: C:\data\my-logs.csv）
+# 2. ボリュームマウントでアクセス可能にする
+docker run --rm -v "C:/data:/data" recruit-q2-2025 --file=/data/my-logs.csv --from=2025-01-01 --to=2025-12-31 --tz=jst --top=10
+```
+
+**異なる期間での実行：**
+```powershell
+docker run --rm -v "${PWD}/src/q2:/data" recruit-q2-2025 --file=/data/sample.csv --from=2025-01-03 --to=2025-01-04 --tz=jst --top=5
+```
+
+**引数なし実行（エラー確認）：**
+```powershell
+docker run --rm recruit-q2-2025
+```
+
+#### Dockerトラブルシューティング
+
+**イメージビルドがキャッシュされている場合の強制リビルド：**
+```powershell
+docker build --no-cache -t recruit-q2-2025 .
+```
+
+**コンテナ内でのデバッグ：**
+```powershell
+docker run --rm -it --entrypoint /bin/bash recruit-q2-2025
+```
+
+**ログの詳細確認：**
+```powershell
+docker run --rm -v "${PWD}/src/q2:/data" recruit-q2-2025 --file=/data/sample.csv --from=2025-01-01 --to=2025-01-31 --tz=jst --top=3 --verbose
+```
+
 ## Q2開発で使用するコマンド
 
+### 基本開発コマンド
 | コマンド | 説明 |
 |---------|------|
 | `pnpm test src/q2` | Q2テストを実行 |
@@ -157,8 +219,15 @@ docker run --rm -v "${PWD}/src/q2:/data" recruit-assignments-2025 --file=/data/s
 | `pnpm q2:run` | Q2 CLIを実行 |
 | `pnpm typecheck` | TypeScript型チェック |
 | `pnpm build` | TypeScriptビルド |
-| `docker build -t recruit-assignments-2025 .` | Dockerイメージビルド |
-| `docker run --rm -v "${PWD}/src/q2:/data" recruit-assignments-2025` | Docker実行 |
+
+### Dockerコマンド
+| コマンド | 説明 |
+|---------|------|
+| `docker build -t recruit-q2-2025 .` | Multi-stage Dockerイメージビルド |
+| `docker build --no-cache -t recruit-q2-2025 .` | キャッシュなしでリビルド |
+| `docker images recruit-q2-2025` | イメージサイズ確認 |
+| `docker run --rm -v "${PWD}/src/q2:/data" recruit-q2-2025 [options]` | Docker実行（ボリュームマウント） |
+| `docker run --rm -it --entrypoint /bin/bash recruit-q2-2025` | コンテナ内デバッグ |
 
 ## Q2プロジェクト構造
 
@@ -174,7 +243,20 @@ src/q2/
 
 
 
-# 自分のCSVファイルを使用（パスを適切に変更）
-docker run --rm -v "/path/to/your/data:/data" recruit-assignments-2025 \
-  --file=/data/your-file.csv --from=2025-01-01 --to=2025-12-31 --tz=jst --top=10
-```
+## Dockerの技術的詳細
+
+### Multi-stage ビルドの利点
+- **Builder Stage**: 開発依存関係を含む完全な環境でビルド
+- **Runtime Stage**: 実行に必要な最小限のファイルのみ含む軽量イメージ
+- **セキュリティ**: 非rootユーザーで実行
+- **ヘルスチェック**: コンテナの健全性監視
+
+### .dockerignoreの効果
+以下のファイル/フォルダがビルドコンテキストから除外されます：
+- 開発用ファイル（テスト、ドキュメント）
+- ビルド成果物（dist, coverage）
+- エディタ設定（.vscode, .idea）
+- VCS履歴（.git）
+- 依存関係キャッシュ（node_modules, .pnpm-store）
+
+これにより、ビルド時間の短縮とセキュリティ向上が実現されます。
