@@ -58,4 +58,30 @@ describe('Q2 core', () => {
     expect(jst[0].date).toBe('2025-01-02');
     expect(ict[0].date).toBe('2025-01-02');
   });
+
+  it('aggregate: groups by date × path and computes average latency', () => {
+    const lines = [
+      '2025-01-03T00:00:00Z,u1,/api/orders,200,100',
+      '2025-01-03T01:00:00Z,u2,/api/orders,200,200',
+      '2025-01-03T02:00:00Z,u3,/api/users,200,90',
+    ];
+    const result = aggregate(lines, {
+      from: '2025-01-01',
+      to: '2025-01-31',
+      tz: 'jst',
+      top: 5,
+    });
+    expect(result).toContainEqual({
+      date: '2025-01-03',
+      path: '/api/orders',
+      count: 2,
+      avgLatency: 150,
+    });
+    expect(result).toContainEqual({
+      date: '2025-01-03',
+      path: '/api/users',
+      count: 1,
+      avgLatency: 90,
+    });
+  });
 });
