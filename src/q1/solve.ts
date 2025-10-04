@@ -148,8 +148,27 @@ const checkRating = (
   rating: Rating,
   hasAdultInSet: boolean
 ): boolean => {
-  // TODO ここを実装
-  return true;
+  switch (rating) {
+    case 'G':
+      return true;
+
+    case 'PG-12':
+      // PG-12: Child needs to be accompanied by an Adult (Child: NG if no Adult)
+      if (age === 'Child' && !hasAdultInSet) {
+        return false;
+      }
+      return true;
+
+    case 'R18+':
+      // R18+: Only Adults allowed (Young/Child: NG)
+      if (age !== 'Adult') {
+        return false;
+      }
+      return true;
+
+    default:
+      return true;
+  }
 };
 
 /**
