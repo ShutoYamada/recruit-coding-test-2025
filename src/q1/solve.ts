@@ -1,4 +1,4 @@
- /* eslint-disable @typescript-eslint/no-unused-vars */
+//  /* eslint-disable @typescript-eslint/no-unused-vars */
 
 export type Age = 'Adult' | 'Young' | 'Child';
 export type Rating = 'G' | 'PG-12' | 'R18+';
@@ -214,6 +214,8 @@ const checkTimeRule = (
  * 理由の順序を安定化（README: 「同伴 → 年齢 → 座席」）
  */
 const orderReasons = (reasons: string[]): string[] => {
+  const order = [MSG.NEED_ADULT, MSG.AGE_LIMIT, MSG.SEAT_LIMIT];
+  reasons.sort((a, b) => order.indexOf(a as typeof order[number]) - order.indexOf(b as typeof order[number]));
   // TODO ここを実装
   return reasons;
 };
