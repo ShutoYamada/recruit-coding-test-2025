@@ -23,6 +23,15 @@ const MSG = {
   SEAT_LIMIT: '対象のチケットではその座席をご利用いただけません',
 } as const;
 
+// 理由の優先順位（READMEに準拠）
+const REASON_PRIORITY = [
+  MSG.NEED_ADULT,
+  MSG.AGE_LIMIT,
+  MSG.SEAT_LIMIT,
+] as const;
+
+// SỬA 1: Thêm kiểu `Reason` để giải quyết lỗi TypeScript
+export type Reason = (typeof REASON_PRIORITY)[number];
 /**
  * 仕様のポイント（READMEに準拠）:
  * - 各行ごとに OK なら価格、NG なら理由（カンマ区切り）。
@@ -63,7 +72,7 @@ export const solve = (input: string): string => {
   let anyNg = false;
 
   for (const t of tickets) {
-    const reasons: string[] = [];
+    const reasons: Reason[] = [];
 
     // 理由の push 順は README の順序に合わせておく（後で orderReasons で厳密化）
     if (!checkTimeRule(t, endMinutes, hasAdult, hasChild)) {
@@ -219,9 +228,12 @@ const checkTimeRule = (
 /**
  * 理由の順序を安定化（README: 「同伴 → 年齢 → 座席」）
  */
-const orderReasons = (reasons: string[]): string[] => {
+const orderReasons = (reasons: Reason[]): Reason[] => {
   // TODO ここを実装
-  return reasons;
+  // 理由を優先度順にソートする
+  return reasons.sort((a, b) => {
+    return REASON_PRIORITY.indexOf(a) - REASON_PRIORITY.indexOf(b);
+  });
 };
 
 // 重複排除（stable）

@@ -3,13 +3,13 @@ import { describe, expect, it } from 'vitest';
 import { solve } from './solve.js';
 
 describe('Q1 solve', () => {
-  it.skip('test run check: returns string', () => {
+  it('test run check: returns string', () => {
     expect(typeof solve('')).toBe('string');
   });
   // ------------------------------
   // [C1] ハッピーパス（基本価格の確認）
   // ------------------------------
-  it.skip('[C1] Adult/Young/Child の価格が正しく出る', () => {
+  it('[C1] Adult/Young/Child の価格が正しく出る', () => {
     const a = solve('Adult,G,10:00,1:00,A-1');
     const y = solve('Young,G,10:00,1:00,A-2');
     const c = solve('Child,G,10:00,1:00,I-3');
@@ -18,7 +18,7 @@ describe('Q1 solve', () => {
     expect(c).toBe('800円');
   });
 
-  it.skip('[C1] 全部OKの複数枚購入で価格が行ごとに出る', () => {
+  it('[C1] 全部OKの複数枚購入で価格が行ごとに出る', () => {
     const input = [
       'Adult,G,10:00,1:00,A-1',
       'Young,G,10:00,1:00,A-2',
@@ -55,7 +55,7 @@ describe('Q1 solve', () => {
   // ------------------------------
   // [C3] 座席規則（J〜L × Child）
   // ------------------------------
-  it.skip('[C3] Child の I 行は購入可 / J 行は購入不可 / L 行は購入不可', () => {
+  it('[C3] Child の I 行は購入可 / J 行は購入不可 / L 行は購入不可', () => {
     const ok = solve('Child,G,10:00,1:00,I-1');
     const j = solve('Child,G,10:00,1:00,J-1');
     const l = solve('Child,G,10:00,1:00,L-24');
@@ -112,7 +112,7 @@ describe('Q1 solve', () => {
   // ------------------------------
   // [C6] 複合理由・順序・重複排除
   // ------------------------------
-  it.skip('[C6] Child + PG-12 + J席 + Adultなし + 終了16:01 → 理由3つ（順序固定）', () => {
+  it('[C6] Child + PG-12 + J席 + Adultなし + 終了16:01 → 理由3つ（順序固定）', () => {
     const out = solve('Child,PG-12,15:30,1:00,J-10'); // end=16:30
     // 順序：同伴必要 → 年齢制限 → 座席制限
     expect(out).toBe(
@@ -124,7 +124,7 @@ describe('Q1 solve', () => {
     );
   });
 
-  it.skip('[C6] PG-12 Child 単独（安全席・早い時刻）→ 年齢制限のみ', () => {
+  it('[C6] PG-12 Child 単独（安全席・早い時刻）→ 年齢制限のみ', () => {
     const out = solve('Child,PG-12,10:00,1:00,I-1');
     expect(out).toBe('対象の映画は年齢制限により閲覧できません');
   });
@@ -132,7 +132,7 @@ describe('Q1 solve', () => {
   // ------------------------------
   // [C7] 全体不可の出力仕様（価格を出さない）
   // ------------------------------
-  it.skip('[C7] 1枚OK/1枚NG の混在 → NG行の理由だけを出力', () => {
+  it('[C7] 1枚OK/1枚NG の混在 → NG行の理由だけを出力', () => {
     const input = [
       'Adult,G,10:00,1:00,A-1', // OK
       'Child,G,10:00,1:00,J-16', // 座席NG
@@ -141,7 +141,7 @@ describe('Q1 solve', () => {
     expect(out).toBe('対象のチケットではその座席をご利用いただけません');
   });
 
-  it.skip('[C7] 全部NGなら全NG理由行が並ぶ（入力順）', () => {
+  it('[C7] 全部NGなら全NG理由行が並ぶ（入力順）', () => {
     const input = [
       'Child,R18+,10:00,1:00,J-1', // 年齢 + 座席
       'Young,R18+,10:00,1:00,A-2', // 年齢
