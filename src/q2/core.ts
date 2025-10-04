@@ -33,8 +33,25 @@ export const aggregate = (lines: string[], opt: Options): Output => {
 export const parseLines = (lines: string[]): Row[] => {
   const out: Row[] = [];
   for (const line of lines) {
-    const [timestamp, userId, path, status, latencyMs] = line.split(',');
+    // 空行をスキップ
+    if (!line || /^\s*$/.test(line)) continue;
+
+    const fields = line.split(',');
+
+    // フィールド数が5つでない場合はスキップ
+    if (fields.length !== 5) continue;
+
+    const [timestamp, userId, path, status, latencyMs] = fields;
+
+    // ヘッダー行（フィールド名が含まれる場合）をスキップ
+    if (timestamp === 'timestamp' || userId === 'userId' || path === 'path') continue;
+
+    // すべてのフィールドが存在しない場合はスキップ
     if (!timestamp || !userId || !path || !status || !latencyMs) continue; // 壊れ行はスキップ
+
+    // status, latencyMs が数値でない場合はスキップ
+    if (isNaN(Number(status)) || isNaN(Number(latencyMs))) continue;
+
     out.push({
       timestamp: timestamp.trim(),
       userId: userId.trim(),
