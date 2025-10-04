@@ -58,8 +58,8 @@ describe('Q2 core - Parse', () => {
   });
 });
 
-  // 2. 期間フィルタ：from/to の境界含む / 範囲外除外
 describe('Q2 core - Aggregate', () => {
+  // 2. 期間フィルタ：from/to の境界含む / 範囲外除外
   it('aggregate: includes both date boundaries', () => {
     const csvLines = [
       '2024-12-31T23:59:59Z,u0,/before,200,50',     // 範囲外(前)
@@ -127,6 +127,49 @@ describe('Q2 core - Aggregate', () => {
     expect(ictResult[0].date).toBe('2025-01-01');     // 10:00のレコード(同日)
     expect(ictResult[1].date).toBe('2025-01-02');     // 17:00のレコード(翌日)
   });
+});
+
+ 
+describe('Q2 core - Aggregation Logic', () => {
+  // 4. 集計：date×path の件数・平均が合う
+  it('aggregate: date and path grouping with count and avgLatency', () => {
+    const csvLines = [
+      '2025-01-01T10:00:00Z,u1,/api/orders,200,100',   // 2025-01-01 /api/orders
+      '2025-01-01T11:00:00Z,u2,/api/orders,200,200',   // 2025-01-01 /api/orders
+      '2025-01-01T12:00:00Z,u3,/api/users,200,150',    // 2025-01-01 /api/users
+      '2025-01-02T10:00:00Z,u4,/api/orders,200,300',   // 2025-01-02 /api/orders
+      '2025-01-02T11:00:00Z,u5,/api/orders,500,400',   // 2025-01-02 /api/orders (異なるステータス)
+    ];
+
+    const result = aggregate(csvLines, {
+      from: '2025-01-01',
+      to: '2025-01-02',
+      tz: 'jst',
+      top: 10
+    });
+
+    // 結果の検証
+    expect(result.length).toBe(3);                    // 3つのグループ
+
+    // 2025-01-01 /api/orders: count=2, avgLatency=(100+200)/2=150
+    const group1 = result.find(r => r.date === '2025-01-01' && r.path === '/api/orders');
+    expect(group1).toBeDefined();
+    expect(group1!.count).toBe(2);                    // Non-null assertion
+    expect(group1!.avgLatency).toBe(150);
+
+    // 2025-01-01 /api/users: count=1, avgLatency=150
+    const group2 = result.find(r => r.date === '2025-01-01' && r.path === '/api/users');
+    expect(group2).toBeDefined();
+    expect(group2!.count).toBe(1);                    // Non-null assertion
+    expect(group2!.avgLatency).toBe(150);
+
+    // 2025-01-02 /api/orders: count=2, avgLatency=(300+400)/2=350
+    const group3 = result.find(r => r.date === '2025-01-02' && r.path === '/api/orders');
+    expect(group3).toBeDefined();
+    expect(group3!.count).toBe(2);                    // Non-null assertion
+    expect(group3!.avgLatency).toBe(350);
+  });
+
   
   it.todo('aggregate basic');
 
