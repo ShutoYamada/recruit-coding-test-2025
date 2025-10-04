@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Row } from './core.js';
-import { filterByDate, parseLines } from './core.js';
+import { filterByDate, parseLines, toTZDate } from './core.js';
 describe('Q2 Core Logic', () => {
   describe('parseLines', () => {
     it('should parse valid lines correctly', () => {
@@ -157,6 +157,36 @@ describe('Q2 Core Logic', () => {
       // Check more specifically which rows were kept
       const keptUserIds = result.map((row) => row.userId);
       expect(keptUserIds).toEqual(['u2', 'u3', 'u4']);
+    });
+  });
+  describe('Q2 Core Logic - Timezone Conversion', () => {
+    describe('toTZDate', () => {
+      it('should correctly convert UTC to JST, handling date crossing', () => {
+        // 18:00 on Jan 03 in UTC is 03:00 on Jan 04 in JST (UTC+9)
+        const utcTimestamp = '2025-01-03T18:00:00Z';
+        const expectedDateInJST = '2025-01-04';
+
+        const result = toTZDate(utcTimestamp, 'jst');
+        expect(result).toBe(expectedDateInJST);
+      });
+
+      it('should correctly convert UTC to ICT without crossing the date', () => {
+        // 10:00 on Jan 03 in UTC is 17:00 on Jan 03 in ICT (UTC+7)
+        const utcTimestamp = '2025-01-03T10:00:00Z';
+        const expectedDateInICT = '2025-01-03';
+
+        const result = toTZDate(utcTimestamp, 'ict');
+        expect(result).toBe(expectedDateInICT);
+      });
+
+      it('should handle the exact moment of date crossing', () => {
+        // 15:00 on Jan 02 in UTC is 00:00 on Jan 03 in JST
+        const utcTimestamp = '2025-01-02T15:00:00Z';
+        const expectedDateInJST = '2025-01-03';
+
+        const result = toTZDate(utcTimestamp, 'jst');
+        expect(result).toBe(expectedDateInJST);
+      });
     });
   });
 });

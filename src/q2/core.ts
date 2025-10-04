@@ -1,3 +1,4 @@
+import { format, toZonedTime } from 'date-fns-tz';
 type TZ = 'jst' | 'ict';
 
 export type Row = {
@@ -21,7 +22,11 @@ export type Output = Array<{
   count: number;
   avgLatency: number;
 }>;
-
+// date-fns と date-fns-tz を使ってタイムゾーン変換を行う
+const TIMEZONE_MAP: Record<TZ, string> = {
+  jst: 'Asia/Tokyo',
+  ict: 'Asia/Bangkok',
+};
 export const aggregate = (lines: string[], opt: Options): Output => {
   const contentLines = lines.slice(1);
   const rows = parseLines(contentLines);
@@ -81,15 +86,15 @@ export const filterByDate = (rows: Row[], from: string, to: string): Row[] => {
     return t >= fromTime && t <= toTime;
   });
 };
-
-const toTZDate = (utcIso: string, tz: TZ): string => {
-  const t = new Date(utcIso);
-  const offsetHours = tz === 'jst' ? 9 : 7; // JST=UTC+9, ICT=UTC+7
-  const local = new Date(t.getTime() + offsetHours * 60 * 60 * 1000);
-  const y = local.getUTCFullYear();
-  const m = (local.getUTCMonth() + 1).toString().padStart(2, '0');
-  const d = local.getUTCDate().toString().padStart(2, '0');
-  return `${y}-${m}-${d}`;
+/**
+ * date-fns-tz ライブラリを使用してタイムゾーン変換の正確性を保証する。
+ * UTCのISOタイムスタンプ文字列を指定されたタイムゾーンのYYYY-MM-DD形式の日付文字列に変換する。
+ */
+export const toTZDate = (utcIso: string, tz: TZ): string => {
+  const timeZone = TIMEZONE_MAP[tz];
+  const dateInUtc = new Date(utcIso);
+  // `date-fns-tz` の `format` 関数は、すべてのタイムゾーン変換ケースを正確に処理します。
+  return format(toZonedTime(dateInUtc, timeZone), 'yyyy-MM-dd', { timeZone });
 };
 
 const groupByDatePath = (rows: Row[], tz: TZ) => {
