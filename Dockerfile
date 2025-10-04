@@ -13,5 +13,7 @@ RUN pnpm build
 FROM node:lts-slim AS runtime
 WORKDIR /app
 COPY --from=builder /app/dist ./dist
-# デフォルトは Q2 の CLI を起動（引数で上書き可能）
-CMD ["node", "dist/q2/main.js"]
+# ESM対応のため package.json を同梱（type: module）
+COPY --from=builder /app/package.json ./package.json
+# Q2 CLI をエントリポイントとして設定（docker run の引数がそのまま渡される）
+ENTRYPOINT ["node", "dist/q2/main.js"]
