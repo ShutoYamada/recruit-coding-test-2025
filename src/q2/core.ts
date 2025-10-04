@@ -33,14 +33,28 @@ export const aggregate = (lines: string[], opt: Options): Output => {
 export const parseLines = (lines: string[]): Row[] => {
   const out: Row[] = [];
   for (const line of lines) {
-    const [timestamp, userId, path, status, latencyMs] = line.split(',');
-    if (!timestamp || !userId || !path || !status || !latencyMs) continue; // 壊れ行はスキップ
+    // const [timestamp, userId, path, status, latencyMs] = line.split(',');
+    // if (!timestamp || !userId || !path || !status || !latencyMs) continue; // 壊れ行はスキップ
+
+    // カンマで分割してトリム
+    const parts = line.split(',').map((s) => s.trim());
+    if(parts.length !== 5) continue;
+
+    const [timestamp, userId, path, statusRaw, latencyRaw] = parts;
+
+    // 壊れ行はスキップ
+    if(/^timestamp$/i.test(timestamp) && /^userid$/i.test(userId)) continue;
+    if(!timestamp || !userId || !path) continue;
+
+    const status = Number(statusRaw);
+    const latencyMs = Number(latencyRaw);
+    if(!Number.isFinite(status) || !Number.isFinite(latencyMs)) continue;
     out.push({
-      timestamp: timestamp.trim(),
-      userId: userId.trim(),
-      path: path.trim(),
-      status: Number(status),
-      latencyMs: Number(latencyMs),
+      timestamp: timestamp,
+      userId: userId,
+      path: path,
+      status: status,
+      latencyMs: latencyMs,
     });
   }
   return out;
