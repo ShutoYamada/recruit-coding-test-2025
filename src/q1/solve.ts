@@ -53,6 +53,7 @@ export const solve = (input: string): string => {
   // セット属性（同一上映前提）
   const hasAdult = tickets.some((t) => t.age === 'Adult');
   const hasChild = tickets.some((t) => t.age === 'Child'); // C5 で使用（グループ規則）
+  const rating = tickets[0].rating;
   const endMinutes = calcEndMinutes(tickets[0]); // 今年は日跨ぎなし前提
 
   // 各行の評価
@@ -66,7 +67,7 @@ export const solve = (input: string): string => {
     if (!checkTimeRule(t, endMinutes, hasAdult, hasChild)) {
       reasons.push(MSG.NEED_ADULT);
     }
-    if (!checkRating(t.age, t.rating, hasAdult)) {
+    if (!checkRating(t.age, rating, hasAdult)) {
       reasons.push(MSG.AGE_LIMIT);
     }
     if (!checkSeat(t)) {
