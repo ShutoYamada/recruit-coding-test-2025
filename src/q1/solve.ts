@@ -238,7 +238,6 @@ const REASON_ORDER: Record<string, number> = {
  */
 const orderReasons = (reasons: string[]): string[] => {
   // TODO [DONE]
-  // Sắp xếp dựa trên thứ tự ưu tiên đã định nghĩa
   return reasons.sort((a, b) => {
     return (REASON_ORDER[a] || 99) - (REASON_ORDER[b] || 99);
   });
