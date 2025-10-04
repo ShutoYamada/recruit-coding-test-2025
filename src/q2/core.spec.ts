@@ -1,14 +1,304 @@
 import { describe, expect, it } from 'vitest';
-import { parseLines } from './core.js';
+import type { Row } from './core.js';
+import {
+  filterByDate,
+  groupByDatePath,
+  parseLines,
+  rankTop,
+  toTZDate,
+} from './core.js';
+describe('Q2 Core Logic', () => {
+  describe('parseLines', () => {
+    it('should parse valid lines correctly', () => {
+      // The responsibility of skipping the header lies with the calling `aggregate` function.
+      // `parseLines` itself does not skip the header.
+      const result = parseLines([
+        '2025-01-03T10:12:00Z,u1,/api/orders,200,100',
+        '2025-01-03T10:13:00Z,u2,/api/users,404,250',
+      ]);
+      expect(result).toHaveLength(2);
+      expect(result[0]).toEqual({
+        timestamp: '2025-01-03T10:12:00Z',
+        userId: 'u1',
+        path: '/api/orders',
+        status: 200,
+        latencyMs: 100,
+      });
+      expect(result[1]).toEqual({
+        timestamp: '2025-01-03T10:13:00Z',
+        userId: 'u2',
+        path: '/api/users',
+        status: 404,
+        latencyMs: 250,
+      });
+    });
 
-describe('Q2 core', () => {
-  it('parseLines: skips broken rows', () => {
-    const rows = parseLines([
-      '2025-01-03T10:12:00Z,u1,/a,200,100',
-      'broken,row,only,three',
-    ]);
-    expect(rows.length).toBe(1);
+    it('should skip lines with insufficient fields', () => {
+      const rows = parseLines([
+        '2025-01-03T10:12:00Z,u1,/api/orders,200,100', // valid
+        'broken,row,only,three', // only 4 fields
+        'incomplete,line', // only 2 fields
+        'single', // only 1 field
+      ]);
+      expect(rows).toHaveLength(1);
+      expect(rows[0].userId).toBe('u1');
+    });
+
+    it('should skip lines with non-numeric status or latencyMs', () => {
+      const rows = parseLines([
+        '2025-01-03T10:12:00Z,u1,/api/orders,200,100', // valid
+        '2025-01-03T10:13:00Z,u2,/api/users,invalid,250', // invalid status
+        '2025-01-03T10:14:00Z,u3,/api/orders,200,invalid', // invalid latency
+        '2025-01-03T10:15:00Z,u4,/api/users,abc,def', // both invalid
+      ]);
+      expect(rows).toHaveLength(1);
+      expect(rows[0].userId).toBe('u1');
+    });
+
+    it('should skip the header line because its values are not numeric', () => {
+      const rows = parseLines([
+        'timestamp,userId,path,status,latencyMs', // header
+      ]);
+      // Skipped because 'status' and 'latencyMs' are not numbers.
+      expect(rows).toHaveLength(0);
+    });
+
+    it('should skip empty and whitespace-only lines', () => {
+      const rows = parseLines([
+        '2025-01-03T10:12:00Z,u1,/api/orders,200,100', // valid
+        '', // empty line
+        '   ', // whitespace only
+        '2025-01-03T10:13:00Z,u2,/api/users,404,250', // valid
+      ]);
+      expect(rows).toHaveLength(2);
+      expect(rows[0].userId).toBe('u1');
+      expect(rows[1].userId).toBe('u2');
+    });
+
+    it('should trim whitespace from fields', () => {
+      const rows = parseLines([
+        ' 2025-01-03T10:12:00Z , u1 , /api/orders , 200 , 100 ',
+      ]);
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toEqual({
+        timestamp: '2025-01-03T10:12:00Z',
+        userId: 'u1',
+        path: '/api/orders',
+        status: 200,
+        latencyMs: 100,
+      });
+    });
+
+    it('should skip lines with missing required fields (empty strings)', () => {
+      const rows = parseLines([
+        '2025-01-03T10:12:00Z,u1,/api/orders,200,100', // valid
+        ',u2,/api/users,404,250', // missing timestamp
+        '2025-01-03T10:13:00Z,,/api/orders,200,150', // missing userId
+        '2025-01-03T10:14:00Z,u3,,404,200', // missing path
+        '2025-01-03T10:15:00Z,u4,/api/users,,300', // missing status
+        '2025-01-03T10:16:00Z,u5,/api/orders,200,', // missing latencyMs
+      ]);
+      expect(rows).toHaveLength(1);
+      expect(rows[0].userId).toBe('u1');
+    });
   });
 
-  it.todo('aggregate basic');
+  // You will add tests for other functions (filter, aggregate, etc.) here
+  describe('filterByDate', () => {
+    it('should correctly filter rows based on the inclusive UTC date range', () => {
+      // 1. Arrange: Prepare sample data with boundary cases
+      const sampleRows: Row[] = [
+        // This row should be filtered out (before 'from')
+        {
+          timestamp: '2025-01-01T23:59:59Z',
+          userId: 'u1',
+          path: '/before',
+          status: 200,
+          latencyMs: 100,
+        },
+        // This row should be kept (exactly on the 'from' boundary)
+        {
+          timestamp: '2025-01-02T00:00:00Z',
+          userId: 'u2',
+          path: '/on-from',
+          status: 200,
+          latencyMs: 100,
+        },
+        // This row should be kept (inside the range)
+        {
+          timestamp: '2025-01-02T12:00:00Z',
+          userId: 'u3',
+          path: '/inside',
+          status: 200,
+          latencyMs: 100,
+        },
+        // This row should be kept (exactly on the 'to' boundary)
+        {
+          timestamp: '2025-01-03T23:59:59Z',
+          userId: 'u4',
+          path: '/on-to',
+          status: 200,
+          latencyMs: 100,
+        },
+        // This row should be filtered out (after 'to')
+        {
+          timestamp: '2025-01-04T00:00:00Z',
+          userId: 'u5',
+          path: '/after',
+          status: 200,
+          latencyMs: 100,
+        },
+      ];
+
+      const fromDate = '2025-01-02';
+      const toDate = '2025-01-03';
+
+      // 2. Act: Call the function under test
+      const result = filterByDate(sampleRows, fromDate, toDate);
+
+      // 3. Assert: Verify the result
+      // Expect that 3 rows will be kept
+      expect(result).toHaveLength(3);
+
+      // Check more specifically which rows were kept
+      const keptUserIds = result.map((row) => row.userId);
+      expect(keptUserIds).toEqual(['u2', 'u3', 'u4']);
+    });
+  });
+  describe('Q2 Core Logic - Timezone Conversion', () => {
+    describe('toTZDate', () => {
+      it('should correctly convert UTC to JST, handling date crossing', () => {
+        // 18:00 on Jan 03 in UTC is 03:00 on Jan 04 in JST (UTC+9)
+        const utcTimestamp = '2025-01-03T18:00:00Z';
+        const expectedDateInJST = '2025-01-04';
+
+        const result = toTZDate(utcTimestamp, 'jst');
+        expect(result).toBe(expectedDateInJST);
+      });
+
+      it('should correctly convert UTC to ICT without crossing the date', () => {
+        // 10:00 on Jan 03 in UTC is 17:00 on Jan 03 in ICT (UTC+7)
+        const utcTimestamp = '2025-01-03T10:00:00Z';
+        const expectedDateInICT = '2025-01-03';
+
+        const result = toTZDate(utcTimestamp, 'ict');
+        expect(result).toBe(expectedDateInICT);
+      });
+
+      it('should handle the exact moment of date crossing', () => {
+        // 15:00 on Jan 02 in UTC is 00:00 on Jan 03 in JST
+        const utcTimestamp = '2025-01-02T15:00:00Z';
+        const expectedDateInJST = '2025-01-03';
+
+        const result = toTZDate(utcTimestamp, 'jst');
+        expect(result).toBe(expectedDateInJST);
+      });
+    });
+  });
+  describe('groupByDatePath', () => {
+    it('should group rows by date and path, calculating count and average latency', () => {
+      // 1. Arrange: Prepare sample data
+      const sampleRows: Row[] = [
+        // Group 1: 2 hits for /api/users on Jan 04 (JST)
+        {
+          timestamp: '2025-01-03T18:00:00Z',
+          userId: 'u1',
+          path: '/api/users',
+          status: 200,
+          latencyMs: 100,
+        },
+        {
+          timestamp: '2025-01-03T19:00:00Z',
+          userId: 'u2',
+          path: '/api/users',
+          status: 200,
+          latencyMs: 150,
+        },
+        // Group 2: 1 hit for /api/products on Jan 04 (JST)
+        {
+          timestamp: '2025-01-03T20:00:00Z',
+          userId: 'u3',
+          path: '/api/products',
+          status: 200,
+          latencyMs: 200,
+        },
+        // Group 3: 1 hit for /api/users on Jan 05 (JST)
+        {
+          timestamp: '2025-01-04T16:00:00Z',
+          userId: 'u4',
+          path: '/api/users',
+          status: 200,
+          latencyMs: 300,
+        },
+      ];
+
+      // 2. Act: Call the function with JST timezone
+      const result = groupByDatePath(sampleRows, 'jst');
+
+      // 3. Assert: Verify the result
+      // Expect 3 groups to be created
+      expect(result).toHaveLength(3);
+
+      // Sort the result for reliable testing
+      const sortedResult = result.sort(
+        (a, b) => a.date.localeCompare(b.date) || a.path.localeCompare(b.path)
+      );
+
+      // Check group 1: /api/products on Jan 04
+      expect(sortedResult[0]).toEqual({
+        date: '2025-01-04',
+        path: '/api/products',
+        count: 1,
+        avgLatency: 200,
+      });
+
+      // Check group 2: /api/users on Jan 04
+      expect(sortedResult[1]).toEqual({
+        date: '2025-01-04',
+        path: '/api/users',
+        count: 2,
+        avgLatency: 125, // (100 + 150) / 2 = 125
+      });
+
+      // Check group 3: /api/users on Jan 05
+      expect(sortedResult[2]).toEqual({
+        date: '2025-01-05',
+        path: '/api/users',
+        count: 1,
+        avgLatency: 300,
+      });
+    });
+  });
+  describe('rankTop', () => {
+    it('should rank top N for each day and then sort the final result', () => {
+      // 1. Arrange: Prepare sample grouped data
+      const groupedItems = [
+        // Data for Jan 04 (unsorted)
+        { date: '2025-01-04', path: '/api/c-path', count: 10, avgLatency: 100 },
+        { date: '2025-01-04', path: '/api/a-path', count: 30, avgLatency: 100 },
+        { date: '2025-01-04', path: '/api/b-path', count: 20, avgLatency: 100 },
+        // Data for Jan 03 (to test date sorting)
+        { date: '2025-01-03', path: '/api/z-path', count: 50, avgLatency: 100 },
+        { date: '2025-01-03', path: '/api/y-path', count: 5, avgLatency: 100 },
+        // Data for tie-breaking (equal counts)
+        { date: '2025-01-04', path: '/api/x-tie', count: 30, avgLatency: 100 },
+      ];
+
+      // 2. Act: Call rankTop with top=2
+      const result = rankTop(groupedItems, 2);
+
+      // 3. Assert: Verify the final result
+      expect(result).toEqual([
+        // Jan 03 should come first
+        { date: '2025-01-03', path: '/api/z-path', count: 50, avgLatency: 100 },
+        { date: '2025-01-03', path: '/api/y-path', count: 5, avgLatency: 100 },
+
+        // Jan 04 comes next, and only top 2 are taken
+        // /api/a-path and /api/x-tie both have count=30, so 'a' comes before 'x'
+        { date: '2025-01-04', path: '/api/a-path', count: 30, avgLatency: 100 },
+        { date: '2025-01-04', path: '/api/x-tie', count: 30, avgLatency: 100 },
+        // /api/b-path (count=20) and /api/c-path (count=10) were discarded
+      ]);
+    });
+  });
 });

@@ -1,3 +1,4 @@
+import { format, toZonedTime } from 'date-fns-tz';
 type TZ = 'jst' | 'ict';
 
 export type Row = {
@@ -21,9 +22,14 @@ export type Output = Array<{
   count: number;
   avgLatency: number;
 }>;
-
+// date-fns と date-fns-tz を使ってタイムゾーン変換を行う
+const TIMEZONE_MAP: Record<TZ, string> = {
+  jst: 'Asia/Tokyo',
+  ict: 'Asia/Bangkok',
+};
 export const aggregate = (lines: string[], opt: Options): Output => {
-  const rows = parseLines(lines);
+  const contentLines = lines.slice(1);
+  const rows = parseLines(contentLines);
   const filtered = filterByDate(rows, opt.from, opt.to);
   const grouped = groupByDatePath(filtered, opt.tz);
   const ranked = rankTop(grouped, opt.top);
@@ -33,8 +39,32 @@ export const aggregate = (lines: string[], opt: Options): Output => {
 export const parseLines = (lines: string[]): Row[] => {
   const out: Row[] = [];
   for (const line of lines) {
-    const [timestamp, userId, path, status, latencyMs] = line.split(',');
-    if (!timestamp || !userId || !path || !status || !latencyMs) continue; // 壊れ行はスキップ
+    // 1行目はヘッダーのためスキップします
+    const parts = line.split(',');
+    if (parts.length !== 5) continue; // カラム数が5でない行（壊れた行）はスキップ
+    // Trim all parts immediately after splitting to handle whitespace
+    const timestamp = parts[0].trim();
+    const userId = parts[1].trim();
+    const path = parts[2].trim();
+    const statusStr = parts[3].trim();
+    const latencyMsStr = parts[4].trim();
+
+    // Now validate the trimmed parts
+    if (!timestamp || !userId || !path || !statusStr || !latencyMsStr) {
+      continue;
+    }
+    // いずれかのカラムが空の場合はスキップ
+    if (!timestamp || !userId || !path || !statusStr || !latencyMsStr) continue;
+
+    const status = parseInt(statusStr, 10);
+    const latencyMs = parseInt(latencyMsStr, 10);
+
+    // status または latency が有効な数値でない場合はスキップ
+    if (isNaN(status) || isNaN(latencyMs)) continue;
+
+    // timestamp が有効な日付文字列でない場合はスキップ
+    if (isNaN(new Date(timestamp).getTime())) continue;
+
     out.push({
       timestamp: timestamp.trim(),
       userId: userId.trim(),
@@ -45,27 +75,29 @@ export const parseLines = (lines: string[]): Row[] => {
   }
   return out;
 };
-
-const filterByDate = (rows: Row[], from: string, to: string): Row[] => {
-  const fromT = Date.parse(from + 'T00:00:00Z');
-  const toT = Date.parse(to + 'T23:59:59Z');
+export const filterByDate = (rows: Row[], from: string, to: string): Row[] => {
+  // 開始日をその日の00:00:00のタイムスタンプに変換する
+  const fromTime = new Date(`${from}T00:00:00.000Z`).getTime();
+  // 終了日をその日の23:59:59.999のタイムスタンプに変換して、その日全体を含める
+  const toTime = new Date(`${to}T23:59:59.999Z`).getTime();
   return rows.filter((r) => {
-    const t = Date.parse(r.timestamp);
-    return t >= fromT && t <= toT;
+    const t = new Date(r.timestamp).getTime();
+    // タイムスタンプが範囲内にある行を保持する
+    return t >= fromTime && t <= toTime;
   });
 };
-
-const toTZDate = (utcIso: string, tz: TZ): string => {
-  const t = new Date(utcIso);
-  const offsetHours = tz === 'jst' ? 9 : 7; // JST=UTC+9, ICT=UTC+7
-  const local = new Date(t.getTime() + offsetHours * 60 * 60 * 1000);
-  const y = local.getUTCFullYear();
-  const m = (local.getUTCMonth() + 1).toString().padStart(2, '0');
-  const d = local.getUTCDate().toString().padStart(2, '0');
-  return `${y}-${m}-${d}`;
+/**
+ * date-fns-tz ライブラリを使用してタイムゾーン変換の正確性を保証する。
+ * UTCのISOタイムスタンプ文字列を指定されたタイムゾーンのYYYY-MM-DD形式の日付文字列に変換する。
+ */
+export const toTZDate = (utcIso: string, tz: TZ): string => {
+  const timeZone = TIMEZONE_MAP[tz];
+  const dateInUtc = new Date(utcIso);
+  // `date-fns-tz` の `format` 関数は、すべてのタイムゾーン変換ケースを正確に処理します。
+  return format(toZonedTime(dateInUtc, timeZone), 'yyyy-MM-dd', { timeZone });
 };
 
-const groupByDatePath = (rows: Row[], tz: TZ) => {
+export const groupByDatePath = (rows: Row[], tz: TZ) => {
   const map = new Map<string, { sum: number; cnt: number }>();
   for (const r of rows) {
     const date = toTZDate(r.timestamp, tz);
@@ -81,7 +113,7 @@ const groupByDatePath = (rows: Row[], tz: TZ) => {
   });
 };
 
-const rankTop = (
+export const rankTop = (
   items: { date: string; path: string; count: number; avgLatency: number }[],
   top: number
 ) => {
