@@ -33,14 +33,27 @@ export const aggregate = (lines: string[], opt: Options): Output => {
 export const parseLines = (lines: string[]): Row[] => {
   const out: Row[] = [];
   for (const line of lines) {
-    const [timestamp, userId, path, status, latencyMs] = line.split(',');
-    if (!timestamp || !userId || !path || !status || !latencyMs) continue; // 壊れ行はスキップ
+    const parts = line.split(',');
+    if (parts.length < 5) continue; // 壊れ行はスキップ
+
+    const [timestamp, userId, path, statusRaw, latencyMsRaw] = parts;
+
+    const status = Number(statusRaw.trim());
+    const latencyMs = Number(latencyMsRaw.trim());
+
+    if (
+      isNaN(status) ||
+      isNaN(latencyMs) ||
+      isNaN(Date.parse(timestamp.trim()))
+    )
+      continue;
+
     out.push({
       timestamp: timestamp.trim(),
       userId: userId.trim(),
       path: path.trim(),
-      status: Number(status),
-      latencyMs: Number(latencyMs),
+      status,
+      latencyMs,
     });
   }
   return out;
@@ -48,20 +61,34 @@ export const parseLines = (lines: string[]): Row[] => {
 
 const filterByDate = (rows: Row[], from: string, to: string): Row[] => {
   const fromT = Date.parse(from + 'T00:00:00Z');
-  const toT = Date.parse(to + 'T23:59:59Z');
+
+  // Calculate the next day of TO to safely filter (to 23:59:59.999Z of TO day)
+  const toDateObj = new Date(to + 'T00:00:00Z');
+  toDateObj.setUTCDate(toDateObj.getUTCDate() + 1);
+  const nextDayOfToT = toDateObj.getTime(); // It is 00:00:00Z of the next day
+
   return rows.filter((r) => {
     const t = Date.parse(r.timestamp);
-    return t >= fromT && t <= toT;
+    // [2] Fix: t <= toT to t < nextDayOfToT
+    return t >= fromT && t < nextDayOfToT;
   });
 };
 
 const toTZDate = (utcIso: string, tz: TZ): string => {
   const t = new Date(utcIso);
+
+  if (isNaN(t.getTime())) return 'Invalid Date';
+
   const offsetHours = tz === 'jst' ? 9 : 7; // JST=UTC+9, ICT=UTC+7
-  const local = new Date(t.getTime() + offsetHours * 60 * 60 * 1000);
-  const y = local.getUTCFullYear();
-  const m = (local.getUTCMonth() + 1).toString().padStart(2, '0');
-  const d = local.getUTCDate().toString().padStart(2, '0');
+
+  const localMs = t.getTime() + offsetHours * 60 * 60 * 1000;
+
+  const localDate = new Date(localMs);
+
+  const y = localDate.getUTCFullYear();
+  const m = (localDate.getUTCMonth() + 1).toString().padStart(2, '0');
+  const d = localDate.getUTCDate().toString().padStart(2, '0');
+
   return `${y}-${m}-${d}`;
 };
 
