@@ -174,7 +174,21 @@ const checkTimeRule = (
   hasAdultInSet: boolean,
   hasChildInSet: boolean
 ): boolean => {
-  // TODO ここを実装
+  if (hasAdultInSet) {
+    return true;
+  }
+
+  const END_LIMIT_CHILD = 16 * 60;
+  const END_LIMIT_YOUNG = 18 * 60;
+
+  if (hasChildInSet && endMinutes > END_LIMIT_CHILD) {
+    return false;
+  }
+
+  if (t.age === 'Young' && endMinutes > END_LIMIT_YOUNG) {
+    return false;
+  }
+
   return true;
 };
 
