@@ -179,6 +179,9 @@ const checkTimeRule = (
   hasChildInSet: boolean
 ): boolean => {
   // TODO ここを実装
+  if(hasAdultInSet) return true;
+  if(hasChildInSet && endMinutes > 16 * 60) return false;
+  if(t.age === 'Young' && endMinutes > 18 * 60) return false;
   return true;
 };
 
