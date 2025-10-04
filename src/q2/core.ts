@@ -35,6 +35,11 @@ export const parseLines = (lines: string[]): Row[] => {
   for (const line of lines) {
     const [timestamp, userId, path, status, latencyMs] = line.split(',');
     if (!timestamp || !userId || !path || !status || !latencyMs) continue; // 壊れ行はスキップ
+
+    const s = Number(status);
+    const l = Number(latencyMs);
+    if (isNaN(s) || isNaN(l)) continue;
+
     out.push({
       timestamp: timestamp.trim(),
       userId: userId.trim(),
