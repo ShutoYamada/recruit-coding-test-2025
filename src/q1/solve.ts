@@ -30,7 +30,6 @@ const REASON_PRIORITY = [
   MSG.SEAT_LIMIT,
 ] as const;
 
-// SỬA 1: Thêm kiểu `Reason` để giải quyết lỗi TypeScript
 export type Reason = (typeof REASON_PRIORITY)[number];
 /**
  * 仕様のポイント（READMEに準拠）:
