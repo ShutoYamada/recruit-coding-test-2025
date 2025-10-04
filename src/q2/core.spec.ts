@@ -105,4 +105,26 @@ describe('Q2 core', () => {
     expect(day3.length).toBe(2);
     expect(day3[0].path).toBe('/a');
   });
+
+  it('aggregate: output sorted by date ASC, count DESC, path ASC', () => {
+    const lines = [
+      '2025-01-03T00:00:00Z,u1,/b,200,100',
+      '2025-01-03T01:00:00Z,u2,/a,200,100',
+      '2025-01-04T00:00:00Z,u3,/a,200,100',
+    ];
+    const result = aggregate(lines, {
+      from: '2025-01-01',
+      to: '2025-01-31',
+      tz: 'jst',
+      top: 5,
+    });
+
+    const sorted = [...result].sort(
+      (a, b) =>
+        a.date.localeCompare(b.date) ||
+        b.count - a.count ||
+        a.path.localeCompare(b.path)
+    );
+    expect(result).toEqual(sorted);
+  });
 });
