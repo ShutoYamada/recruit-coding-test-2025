@@ -218,4 +218,66 @@ describe('Q2 core', () => {
 
     expect(out).toEqual([...expectedDay1, ...expectedDay2]);
   });
+
+  // [C8] その他ケース（拡張テスト）
+  describe('[C8] その他ケース', () => {
+    it(' top が実際のパス数より極端に大きい (top=999) 場合でも全件返る', () => {
+      const lines = [
+        '2025-01-01T00:00:00Z,u1,/a,200,100',
+        '2025-01-01T00:10:00Z,u2,/a,200,100',
+        '2025-01-01T01:00:00Z,u3,/b,200,100',
+        '2025-01-01T02:00:00Z,u4,/c,200,100',
+      ];
+      const out = aggregate(lines, {
+        from: '2025-01-01',
+        to: '2025-01-01',
+        tz: 'jst',
+        top: 999,
+      });
+      expect(out).toEqual([
+        { date: '2025-01-01', path: '/a', count: 2, avgLatency: 100 },
+        { date: '2025-01-01', path: '/b', count: 1, avgLatency: 100 },
+        { date: '2025-01-01', path: '/c', count: 1, avgLatency: 100 },
+      ]);
+    });
+
+    it(' 複数日: 日毎に top を独立適用 (片方が少数パス, 片方は切り捨て)', () => {
+      const lines = [
+        // Day1 (2 paths only)
+        '2025-01-01T00:00:00Z,u1,/a,200,100',
+        '2025-01-01T00:10:00Z,u2,/a,200,100',
+        '2025-01-01T01:00:00Z,u3,/b,200,100',
+        // Day2 (3 paths -> trimmed to top2)
+        '2025-01-02T00:00:00Z,u4,/c,200,100',
+        '2025-01-02T00:10:00Z,u5,/c,200,100',
+        '2025-01-02T01:00:00Z,u6,/d,200,100',
+        '2025-01-02T02:00:00Z,u7,/e,200,100',
+      ];
+      const out = aggregate(lines, {
+        from: '2025-01-01',
+        to: '2025-01-02',
+        tz: 'jst',
+        top: 2,
+      });
+      expect(out).toEqual([
+        { date: '2025-01-01', path: '/a', count: 2, avgLatency: 100 },
+        { date: '2025-01-01', path: '/b', count: 1, avgLatency: 100 },
+        { date: '2025-01-02', path: '/c', count: 2, avgLatency: 100 },
+        { date: '2025-01-02', path: '/d', count: 1, avgLatency: 100 },
+      ]);
+    });
+
+    it(' 前後に空白を含む1行でも trim されてパースされる', () => {
+      const lines = [' 2025-01-01T00:00:00Z , u1 , /a , 200 , 100 '];
+      const out = aggregate(lines, {
+        from: '2025-01-01',
+        to: '2025-01-01',
+        tz: 'jst',
+        top: 5,
+      });
+      expect(out).toEqual([
+        { date: '2025-01-01', path: '/a', count: 1, avgLatency: 100 },
+      ]);
+    });
+  });
 });
