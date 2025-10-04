@@ -3,19 +3,16 @@ import { aggregate, parseLines } from './core.js';
 
 // eslint-disable-next-line max-lines-per-function
 describe('Q2 core', () => {
-  // src/q2/core.spec.ts (Sửa lại test parseLines)
-
   it('parseLines: skips broken rows (missing column, non-numeric, invalid timestamp)', () => {
     const rows = parseLines([
-      '2025-01-03T10:12:00Z,u1,/a,200,100', // Dòng 1: OK
-      'broken,row,only,three', // Dòng 2: NG
-      'broken,row,only,three,parts', // Dòng 3: NG (dòng gây lỗi)
+      '2025-01-03T10:12:00Z,u1,/a,200,100',
+      'broken,row,only,three',
+      'broken,row,only,three,parts',
     ]);
 
-    expect(rows.length).toBe(1); // Dòng 1 là hợp lệ duy nhất
+    expect(rows.length).toBe(1);
     expect(rows[0].path).toBe('/a');
   });
-  // Thử chạy test lại với 3 dòng này.```
 
   // [C2] Aggregate Basic
   it('aggregate basic: groups, counts, and calculates avgLatency (rounding check)', () => {

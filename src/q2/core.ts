@@ -34,24 +34,22 @@ export const parseLines = (lines: string[]): Row[] => {
   const out: Row[] = [];
   for (const line of lines) {
     const parts = line.split(',');
-    if (parts.length < 5) continue; // 壊れ行はスキップ
+    if (parts.length < 5) continue;
 
-    const [timestamp, userId, path, statusRaw, latencyMsRaw] = parts;
+    const [timestampRaw, userIdRaw, pathRaw, statusRaw, latencyMsRaw] = parts;
+    const timestamp = timestampRaw.trim();
+    const userId = userIdRaw.trim();
+    const path = pathRaw.trim();
 
     const status = Number(statusRaw.trim());
     const latencyMs = Number(latencyMsRaw.trim());
-
-    if (
-      isNaN(status) ||
-      isNaN(latencyMs) ||
-      isNaN(Date.parse(timestamp.trim()))
-    )
+    if (isNaN(status) || isNaN(latencyMs) || isNaN(Date.parse(timestamp)))
       continue;
 
     out.push({
-      timestamp: timestamp.trim(),
-      userId: userId.trim(),
-      path: path.trim(),
+      timestamp,
+      userId,
+      path,
       status,
       latencyMs,
     });
