@@ -37,8 +37,17 @@ export const parseLines = (lines: string[]): Row[] => {
     // 1行目はヘッダーのためスキップします
     const parts = line.split(',');
     if (parts.length !== 5) continue; // カラム数が5でない行（壊れた行）はスキップ
+    // Trim all parts immediately after splitting to handle whitespace
+    const timestamp = parts[0].trim();
+    const userId = parts[1].trim();
+    const path = parts[2].trim();
+    const statusStr = parts[3].trim();
+    const latencyMsStr = parts[4].trim();
 
-    const [timestamp, userId, path, statusStr, latencyMsStr] = parts;
+    // Now validate the trimmed parts
+    if (!timestamp || !userId || !path || !statusStr || !latencyMsStr) {
+      continue;
+    }
     // いずれかのカラムが空の場合はスキップ
     if (!timestamp || !userId || !path || !statusStr || !latencyMsStr) continue;
 
