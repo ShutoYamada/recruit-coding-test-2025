@@ -86,8 +86,16 @@ export const solve = (input: string): string => {
     }
   }
 
-  // TODO 「全体不可」のときは価格を出さず、NG行の理由だけを出力する
+  // 全体不可の場合は価格を出さず、NG行の理由のみ出力
+  // If any ticket is NG -> suppress prices, output only reasons
+  if (anyNg) {
+    return evaluated
+      .filter((e) => !e.ok)
+      .map((e) => e.text)
+      .join('\n');
+  }
 
+  // 全員OKなら価格を出力 / If all OK -> output prices
   return evaluated.map((e) => e.text).join('\n');
 };
 
@@ -97,6 +105,15 @@ export const solve = (input: string): string => {
  *  - startHH/startMM/durH/durM の範囲チェック（例: 23:59, 分は 0-59）
  *  - 座席の列番号 1-24 の範囲チェック
  *  - その他フォーマットの揺れ（必要なら）
+ */
+/**
+ *
+ * @param line - 入力行 / Input line
+ * @returns パース結果 or null (不正入力) / Parsed result or null (invalid input)
+ * バリデーション / Validation:
+ * start: HH:MM (0<=HH<=23, 0<=MM<=59)
+ * dur: H:MM (H>=0, 0<=MM<=59)
+ * seat: [A-L]-[1-24]
  */
 const parseLine = (line: string): Ticket | null => {
   const parts = line.split(',').map((s) => s.trim());
@@ -118,6 +135,13 @@ const parseLine = (line: string): Ticket | null => {
   const durM = parseInt(dur[2], 10);
   const row = seat[1].toUpperCase();
   const col = parseInt(seat[2], 10);
+
+  // バリデーション / Validation
+  if (startHH < 0 || startHH > 23) return null
+  if (startMM < 0 || startMM > 59) return null
+  if (durH < 0) return null
+  if (durM < 0 || durM > 59) return null
+  if (col < 1 || col > 24) return null
 
   return {
     age: ageRaw as Age,
@@ -143,21 +167,53 @@ const calcEndMinutes = (t: Ticket): number => {
  *  - PG-12: Child は Adult 同時購入がなければ不可
  *  - R18+: Adult 以外は不可
  */
+
+/**
+ *
+ * @param age - 年齢区分 (Adult | Young | Child) / Age category
+ * @param rating - レーティング (G | PG-12 | R18+) / Movie rating
+ * @param hasAdultInSet - 購入セットに Adult が含まれるか / Whether the ticket set includes an Adult
+ * @returns true=購入可 / purchasable, false=購入不可 / not purchasable
+ */
 const checkRating = (
   age: Age,
   rating: Rating,
   hasAdultInSet: boolean
 ): boolean => {
-  // TODO ここを実装
-  return true;
+  // G は全員OK / G rating: always allowed
+  if (rating === 'G')
+    return true
+
+  // PG-12: Child は Adult がいないと NG / Child requires Adult in set
+  if (rating === 'PG-12') {
+    if (age === 'Child' && !hasAdultInSet) return false
+    return true;
+  }
+
+  // R18+: Adult のみ可 / Only Adult is allowed
+  if (rating === 'R18+') {
+    if (age !== 'Adult') return false
+    return true;
+  }
+
+  // 想定外は NG / Unexpected case -> NG
+  return false;
 };
 
 /**
  * 座席の規則
  *  - J〜L は Child 不可
  */
+
+/**
+ *
+ * @param t - チケット情報 / Ticket info
+ * @returns true=利用可 / allowed, false=利用不可 / not allowed
+ */
 const checkSeat = (t: Ticket): boolean => {
-  // TODO ここを実装
+  if (t.age === 'Child' && ['J', 'K', 'L'].includes(t.row)) {
+    return false;
+  }
   return true;
 };
 
@@ -168,22 +224,55 @@ const checkSeat = (t: Ticket): boolean => {
  *  - Adult が 0 で Young 単独など、終了が 18:00 を超える Young は NG
  *  - ちょうど 16:00/18:00 は OK
  */
+/**
+ *
+ * @param t - チケット情報 / Ticket info
+ * @param endMinutes - 終了時刻（分） / End time (in minutes)
+ * @param hasAdultInSet - 購入セットに Adult が含まれるか / Whether the ticket set includes an Adult
+ * @param hasChildInSet - 購入セットに Child が含まれるか / Whether the ticket set includes a Child
+ * @returns true=利用可 / allowed, false=利用不可 / not allowed
+ */
 const checkTimeRule = (
   t: Ticket,
   endMinutes: number,
   hasAdultInSet: boolean,
   hasChildInSet: boolean
 ): boolean => {
-  // TODO ここを実装
+  // Adult がいれば常にOK / Always allowed if there's an Adult
+  if (hasAdultInSet) return true
+
+  // Adult が 0 かつ Child を含み、終了が 16:00 を超える -> Young も含め全員 NG
+  if (hasChildInSet && endMinutes > 16 * 60) {
+    return false
+  }
+
+  // Adult が 0 で Young 単独など、終了が 18:00 を超える Young は NG
+  if (t.age === 'Young' && endMinutes > 18 * 60) {
+    return false
+  }
+
+  // それ以外は OK / Otherwise, it's allowed
   return true;
 };
 
 /**
  * 理由の順序を安定化（README: 「同伴 → 年齢 → 座席」）
  */
+
+/**
+ *
+ * @param reasons - 理由リスト / List of reasons
+ * @returns 順序が安定化された配列 / Reordered array of reasons
+ */
 const orderReasons = (reasons: string[]): string[] => {
-  // TODO ここを実装
-  return reasons;
+  const priority: Record<string, number> = {
+    [MSG.NEED_ADULT]: 1,
+    [MSG.AGE_LIMIT]: 2,
+    [MSG.SEAT_LIMIT]: 3,
+  }
+  return reasons.slice().sort((a, b) => {
+    return (priority[a] ?? 99) - (priority[b] ?? 99);
+  })
 };
 
 // 重複排除（stable）
