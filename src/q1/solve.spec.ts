@@ -67,14 +67,14 @@ describe('Q1 solve', () => {
   // ------------------------------
   // [C4] 時刻規則（境界含む、Adult なし）
   // ------------------------------
-  it.skip('[C4] Child: 終了16:00ちょうどは可 / 16:01は同伴必要', () => {
+  it('[C4] Child: 終了16:00ちょうどは可 / 16:01は同伴必要', () => {
     const ok = solve('Child,G,15:00,1:00,I-1'); // end=16:00
     const ng = solve('Child,G,15:01,1:00,I-2'); // end=16:01
     expect(ok).toBe('800円');
     expect(ng).toBe('対象の映画の入場には大人の同伴が必要です');
   });
 
-  it.skip('[C4] Young: 終了18:00ちょうどは可 / 18:01は同伴必要', () => {
+  it('[C4] Young: 終了18:00ちょうどは可 / 18:01は同伴必要', () => {
     const ok = solve('Young,G,17:00,1:00,A-1'); // end=18:00
     const ng = solve('Young,G,17:01,1:00,A-2'); // end=18:01
     expect(ok).toBe('1200円');
@@ -84,7 +84,7 @@ describe('Q1 solve', () => {
   // ------------------------------
   // [C5] グループ規則（Adult 不在で Child を含む）
   // ------------------------------
-  it.skip('[C5] Adult なし + Young & Child / 終了16:01超 → 両方 同伴必要 で全体不可', () => {
+  it('[C5] Adult なし + Young & Child / 終了16:01超 → 両方 同伴必要 で全体不可', () => {
     const input = [
       'Young,G,15:30,1:00,A-1', // end=16:30
       'Child,G,15:30,1:00,I-2', // end=16:30
@@ -99,7 +99,7 @@ describe('Q1 solve', () => {
     );
   });
 
-  it.skip('[C5] Adult を1枚追加で Young/Child とも購入可（同伴必要が消える）', () => {
+  it('[C5] Adult を1枚追加で Young/Child とも購入可（同伴必要が消える）', () => {
     const input = [
       'Adult,G,15:30,1:00,A-3',
       'Young,G,15:30,1:00,A-1',
