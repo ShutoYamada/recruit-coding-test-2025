@@ -176,7 +176,15 @@ const checkRating = (
  *  - J〜L は Child 不可
  */
 const checkSeat = (t: Ticket): boolean => {
-  // TODO ここを実装
+  if (t.age === 'Child') {
+    const rowCode = t.row.charCodeAt(0);
+    const J_CODE = 'J'.charCodeAt(0);
+    const L_CODE = 'L'.charCodeAt(0);
+
+    if (rowCode >= J_CODE && rowCode <= L_CODE) {
+      return false;
+    }
+  }
   return true;
 };
 
