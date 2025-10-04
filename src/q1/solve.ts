@@ -96,10 +96,18 @@ export const solve = (input: string): string => {
   }
 
   // TODO 「全体不可」のときは価格を出さず、NG行の理由だけを出力する
-
-  return evaluated.map((e) => e.text).join('\n');
+  // 最終的な出力ロジック
+  if (anyNg) {
+    // NGがあれば、NG行の理由だけを出力する
+    return evaluated
+      .filter((e) => !e.ok)
+      .map((e) => e.text)
+      .join('\n');
+  } else {
+    // NGがなければ、すべての価格を出力する
+    return evaluated.map((e) => e.text).join('\n');
+  }
 };
-
 /**
  * 簡易パーサ（最小限の検証のみ）
  * TODO:
