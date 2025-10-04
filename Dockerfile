@@ -12,6 +12,9 @@ RUN pnpm build
 # --- runtime ---
 FROM node:lts-slim AS runtime
 WORKDIR /app
-COPY --from=builder /app/dist ./dist
-# デフォルトは Q2 の CLI を起動（引数で上書き可能）
-CMD ["node", "dist/q2/main.js"]
+RUN corepack enable
+COPY package.json pnpm-lock.yaml* ./
+RUN pnpm install --prod
+RUN pnpm add -g tsx
+COPY src ./src
+CMD ["pnpm", "q2:run"]
