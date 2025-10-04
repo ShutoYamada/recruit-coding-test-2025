@@ -33,14 +33,23 @@ export const aggregate = (lines: string[], opt: Options): Output => {
 export const parseLines = (lines: string[]): Row[] => {
   const out: Row[] = [];
   for (const line of lines) {
+    // Skip empty or whitespace-only lines
+    if (!line || /^\s*$/.test(line)) continue;
+    
     const [timestamp, userId, path, status, latencyMs] = line.split(',');
     if (!timestamp || !userId || !path || !status || !latencyMs) continue; // 壊れ行はスキップ
+    
+    // Validate numeric fields
+    const statusNum = Number(status);
+    const latencyNum = Number(latencyMs);
+    if (isNaN(statusNum) || isNaN(latencyNum)) continue; // Skip invalid numbers
+    
     out.push({
       timestamp: timestamp.trim(),
       userId: userId.trim(),
       path: path.trim(),
-      status: Number(status),
-      latencyMs: Number(latencyMs),
+      status: statusNum,
+      latencyMs: latencyNum,
     });
   }
   return out;
