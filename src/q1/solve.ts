@@ -87,12 +87,10 @@ export const solve = (input: string): string => {
   }
 
   if (anyNg) {
-    for (let i = 0; i < evaluated.length; i++) {
-      if (evaluated[i].ok) {
-        evaluated[i].ok = false;
-        evaluated[i].text = '';
-      }
-    }
+    return evaluated
+      .filter((e) => !e.ok)
+      .map((e) => e.text)
+      .join('\n');
   }
   // TODO 「全体不可」のときは価格を出さず、NG行の理由だけを出力する
 
