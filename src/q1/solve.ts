@@ -119,6 +119,11 @@ const parseLine = (line: string): Ticket | null => {
   const row = seat[1].toUpperCase();
   const col = parseInt(seat[2], 10);
 
+  // 境界値チェック
+  if (startHH > 23 || startMM > 59 || durM > 59 || col < 1 || col > 24) {
+    return null;
+  }
+
   return {
     age: ageRaw as Age,
     rating: ratingRaw as Rating,
