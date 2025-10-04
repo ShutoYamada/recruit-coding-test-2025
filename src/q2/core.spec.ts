@@ -1,7 +1,7 @@
 /* eslint-disable max-lines-per-function */
 import { describe, expect, it } from 'vitest';
-import { parseLines, filterByDate, toTZDate } from './core.js';
-import { Row, TZ } from './core.js';
+import { parseLines, filterByDate, toTZDate, aggregate } from './core.js';
+import { Row, TZ, Options, Output } from './core.js';
 
 describe('Q2 core', () => {
   it('parseLines: skips broken rows', () => {
@@ -207,4 +207,41 @@ describe('Q2 core', () => {
       '2026-01-01',
     ].join('\n'));
   });
+
+  it('aggregate: count and average per date-path must be correct', () => {
+    const options: Options = {
+      from: '2025-01-01',
+      to: '2025-01-31',
+      tz: 'jst',
+      top: 3
+    };
+    const input: string[][] = [
+      // 2025-01-03 x users
+      ['2025-01-03T10:12:00Z,u1,/api/users,200,120',
+      '2025-01-03T10:12:00Z,u2,/api/users,200,140',],
+      // 2025-01-04 x users
+      ['2025-01-04T10:12:00Z,u3,/api/users,200,60',
+      '2025-01-04T10:12:00Z,u2,/api/users,200,200',
+      '2025-01-04T10:12:00Z,u4,/api/users,200,70'],
+      // 2025-01-03 x orders
+      ['2025-01-03T10:12:00Z,u1,/api/orders,200,120',
+      '2025-01-03T10:12:00Z,u1,/api/orders,200,150',
+      '2025-01-03T10:12:00Z,u2,/api/orders,200,150'],
+      // 2025-01-04 x orders
+      ['2025-01-04T10:12:00Z,u3,/api/orders,200,80',
+      '2025-01-04T10:12:00Z,u4,/api/orders,200,300',
+      '2025-01-04T10:12:00Z,u5,/api/orders,200,100'],
+      // 2025-01-05 x orders
+      ['2025-01-05T10:12:00Z,u5,/api/orders,200,60'],
+    ];
+    const out: Output = input.flatMap((i) => aggregate(i, options));
+    expect(out).toEqual([
+      { date: '2025-01-03', path: '/api/users',  count: 2, avgLatency: 130 },
+      { date: '2025-01-04', path: '/api/users',  count: 3, avgLatency: 110 },
+      { date: '2025-01-03', path: '/api/orders', count: 3, avgLatency: 140 },
+      { date: '2025-01-04', path: '/api/orders', count: 3, avgLatency: 160 },
+      { date: '2025-01-05', path: '/api/orders', count: 1, avgLatency: 60  },
+    ]);
+  });
+
 });
