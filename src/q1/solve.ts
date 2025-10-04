@@ -154,6 +154,15 @@ const checkRating = (
   hasAdultInSet: boolean
 ): boolean => {
   // TODO ここを実装
+  // R18+: Adult 以外は不可
+  if (rating === 'R18+') {
+    return age === 'Adult';
+  }
+  // PG-12: Child は Adult 同時購入がなければ不可
+  if (rating === 'PG-12' && age === 'Child') {
+    return hasAdultInSet;
+  }
+  // G指定などは常に許可
   return true;
 };
 
@@ -163,6 +172,10 @@ const checkRating = (
  */
 const checkSeat = (t: Ticket): boolean => {
   // TODO ここを実装
+  // J〜L は Child 不可
+  if (t.age === 'Child' && ['J', 'K', 'L'].includes(t.row)) {
+    return false;
+  }
   return true;
 };
 
