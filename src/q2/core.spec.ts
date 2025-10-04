@@ -494,5 +494,143 @@ describe('Q2 core', () => {
     });
   });
 
+  describe('Final output sorting', () => {
+    it('should sort final results by date ASC → count DESC → path ASC', () => {
+      // 最終出力のソート順序テスト: date ASC → count DESC → path ASC
+      const result = aggregate([
+        // 2025-01-01のデータ
+        '2025-01-01T10:00:00Z,u1,/api/zebra,200,100', // count=1
+        '2025-01-01T10:01:00Z,u2,/api/alpha,200,110',
+        '2025-01-01T10:02:00Z,u3,/api/alpha,200,120', // count=2
+        '2025-01-01T10:03:00Z,u4,/api/beta,200,130', // count=1
+
+        // 2025-01-02のデータ
+        '2025-01-02T10:00:00Z,u5,/api/gamma,200,140',
+        '2025-01-02T10:01:00Z,u6,/api/gamma,200,150',
+        '2025-01-02T10:02:00Z,u7,/api/gamma,200,160', // count=3
+        '2025-01-02T10:03:00Z,u8,/api/delta,200,170',
+        '2025-01-02T10:04:00Z,u9,/api/delta,200,180', // count=2
+
+        // 2025-01-03のデータ
+        '2025-01-03T10:00:00Z,u10,/api/omega,200,190', // count=1
+        '2025-01-03T10:01:00Z,u11,/api/epsilon,200,200',
+        '2025-01-03T10:02:00Z,u12,/api/epsilon,200,210', // count=2
+      ], {
+        from: '2025-01-01',
+        to: '2025-01-03',
+        tz: 'jst',
+        top: 10 // 全て取得してソート確認
+      });
+
+      expect(result).toHaveLength(7);
+
+      // 期待される順序を検証
+      const expected = [
+        // 2025-01-01: count DESC → path ASC
+        { date: '2025-01-01', path: '/api/alpha', count: 2 },
+        { date: '2025-01-01', path: '/api/beta', count: 1 },
+        { date: '2025-01-01', path: '/api/zebra', count: 1 },
+
+        // 2025-01-02: count DESC → path ASC
+        { date: '2025-01-02', path: '/api/gamma', count: 3 },
+        { date: '2025-01-02', path: '/api/delta', count: 2 },
+
+        // 2025-01-03: count DESC → path ASC
+        { date: '2025-01-03', path: '/api/epsilon', count: 2 },
+        { date: '2025-01-03', path: '/api/omega', count: 1 },
+      ];
+
+      for (let i = 0; i < expected.length; i++) {
+        expect(result[i].date).toBe(expected[i].date);
+        expect(result[i].path).toBe(expected[i].path);
+        expect(result[i].count).toBe(expected[i].count);
+      }
+    });
+
+    it('should handle cross-month date sorting correctly', () => {
+      // 月をまたぐ日付ソートの正確性テスト
+      const result = aggregate([
+        // 2025-01-31 (1月末)
+        '2025-01-31T10:00:00Z,u1,/api/january,200,100',
+        '2025-01-31T10:01:00Z,u2,/api/january,200,110', // count=2
+
+        // 2025-02-01 (2月始め)
+        '2025-02-01T10:00:00Z,u3,/api/february,200,120', // count=1
+
+        // 2025-01-30 (1月末の前日)
+        '2025-01-30T10:00:00Z,u4,/api/earlier,200,130',
+        '2025-01-30T10:01:00Z,u5,/api/earlier,200,140',
+        '2025-01-30T10:02:00Z,u6,/api/earlier,200,150', // count=3
+      ], {
+        from: '2025-01-30',
+        to: '2025-02-01',
+        tz: 'jst',
+        top: 10
+      });
+
+      expect(result).toHaveLength(3);
+
+      // 日付の昇順であることを確認 (1月30日 → 1月31日 → 2月1日)
+      expect(result[0].date).toBe('2025-01-30');
+      expect(result[0].path).toBe('/api/earlier');
+      expect(result[0].count).toBe(3);
+
+      expect(result[1].date).toBe('2025-01-31');
+      expect(result[1].path).toBe('/api/january');
+      expect(result[1].count).toBe(2);
+
+      expect(result[2].date).toBe('2025-02-01');
+      expect(result[2].path).toBe('/api/february');
+      expect(result[2].count).toBe(1);
+    });
+
+    it('should apply top N per date then sort globally', () => {
+      // 日付ごとにTop N適用後、全体でソートするテスト
+      const result = aggregate([
+        // 2025-01-02: 多くのパスがあるが、top=2で制限
+        '2025-01-02T10:00:00Z,u1,/api/high1,200,100',
+        '2025-01-02T10:01:00Z,u2,/api/high1,200,110',
+        '2025-01-02T10:02:00Z,u3,/api/high1,200,120',
+        '2025-01-02T10:03:00Z,u4,/api/high1,200,130', // count=4
+
+        '2025-01-02T10:04:00Z,u5,/api/mid1,200,140',
+        '2025-01-02T10:05:00Z,u6,/api/mid1,200,150',
+        '2025-01-02T10:06:00Z,u7,/api/mid1,200,160', // count=3
+
+        '2025-01-02T10:07:00Z,u8,/api/low1,200,170',
+        '2025-01-02T10:08:00Z,u9,/api/low1,200,180', // count=2 - top=2でカットオフ
+
+        '2025-01-02T10:09:00Z,u10,/api/excluded,200,190', // count=1 - 除外される
+
+        // 2025-01-01: より早い日付だが結果の先頭に来る
+        '2025-01-01T10:00:00Z,u11,/api/early,200,200', // count=1
+      ], {
+        from: '2025-01-01',
+        to: '2025-01-02',
+        tz: 'jst',
+        top: 2 // 各日付でトップ2のみ
+      });
+
+      // 2025-01-01から1つ、2025-01-02から2つ = 合計3つ
+      expect(result).toHaveLength(3);
+
+      // date ASC が優先されるので 2025-01-01 が最初に来る
+      expect(result[0].date).toBe('2025-01-01');
+      expect(result[0].path).toBe('/api/early');
+      expect(result[0].count).toBe(1);
+
+      // 2025-01-02 のトップ2がcount順で続く
+      expect(result[1].date).toBe('2025-01-02');
+      expect(result[1].path).toBe('/api/high1');
+      expect(result[1].count).toBe(4);
+
+      expect(result[2].date).toBe('2025-01-02');
+      expect(result[2].path).toBe('/api/mid1');
+      expect(result[2].count).toBe(3);
+
+      // /api/low1 と /api/excluded は top=2 制限により除外される
+    });
+  });
+
   it.todo('aggregate basic');
 });
