@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-
 export type Age = 'Adult' | 'Young' | 'Child';
 export type Rating = 'G' | 'PG-12' | 'R18+';
 
@@ -87,8 +85,14 @@ export const solve = (input: string): string => {
   }
 
   // TODO 「全体不可」のときは価格を出さず、NG行の理由だけを出力する
-
-  return evaluated.map((e) => e.text).join('\n');
+  if (anyNg) {
+    return evaluated
+      .map((e) => (e.ok ? '' : e.text))
+      .filter(Boolean)
+      .join('\n');
+  } else {
+    return evaluated.map((e) => e.text).join('\n');
+  }
 };
 
 /**
@@ -118,6 +122,10 @@ const parseLine = (line: string): Ticket | null => {
   const durM = parseInt(dur[2], 10);
   const row = seat[1].toUpperCase();
   const col = parseInt(seat[2], 10);
+  if (startHH < 0 || startHH > 23 || startMM < 0 || startMM > 59) return null;
+  if (durH < 0 || durM < 0 || durM > 59) return null;
+
+  if (col < 1 || col > 24) return null;
 
   return {
     age: ageRaw as Age,
