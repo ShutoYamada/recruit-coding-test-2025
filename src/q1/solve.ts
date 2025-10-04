@@ -86,8 +86,16 @@ export const solve = (input: string): string => {
     }
   }
 
-  // TODO 「全体不可」のときは価格を出さず、NG行の理由だけを出力する
+  // 「全体不可」のときは価格を出さず、NG行の理由だけを出力する
+  if (anyNg) {
+    // NG行だけを出力
+    return evaluated
+      .filter((e) => !e.ok)
+      .map((e) => e.text)
+      .join('\n');
+  }
 
+  // 全てOKの場合は価格を出力
   return evaluated.map((e) => e.text).join('\n');
 };
 
@@ -119,6 +127,13 @@ const parseLine = (line: string): Ticket | null => {
   const row = seat[1].toUpperCase();
   const col = parseInt(seat[2], 10);
 
+  // 値の範囲をチェック
+  if (startHH < 0 || startHH > 23) return null;
+  if (startMM < 0 || startMM > 59) return null;
+  if (durH < 0) return null;
+  if (durM < 0 || durM > 59) return null;
+  if (col < 1 || col > 24) return null;
+
   return {
     age: ageRaw as Age,
     rating: ratingRaw as Rating,
@@ -148,8 +163,22 @@ const checkRating = (
   rating: Rating,
   hasAdultInSet: boolean
 ): boolean => {
-  // TODO ここを実装
-  return true;
+  switch (rating) {
+    case 'G':
+      return true; // 全員OK
+
+    case 'PG-12':
+      if (age === 'Child' && !hasAdultInSet) {
+        return false; // Childは同伴必要
+      }
+      return true;
+
+    case 'R18+':
+      return age === 'Adult'; // Adult以外は不可
+
+    default:
+      return false; // 未知のレーティングは不可
+  }
 };
 
 /**
@@ -157,7 +186,10 @@ const checkRating = (
  *  - J〜L は Child 不可
  */
 const checkSeat = (t: Ticket): boolean => {
-  // TODO ここを実装
+  // 子供は J、K、L 列に座ることができない
+  if (t.age === 'Child' && ['J', 'K', 'L'].includes(t.row)) {
+    return false;
+  }
   return true;
 };
 
@@ -174,7 +206,30 @@ const checkTimeRule = (
   hasAdultInSet: boolean,
   hasChildInSet: boolean
 ): boolean => {
-  // TODO ここを実装
+  // セット内に大人がいる場合 → 常にOK
+  if (hasAdultInSet) {
+    return true;
+  }
+
+  // 大人がいない場合
+  // 16:00 = 16 * 60 = 960 分
+  // 18:00 = 18 * 60 = 1080 分
+
+  // 子供が含まれていて、終了時刻が16:00を超える場合 → 全員禁止
+  if (hasChildInSet && endMinutes > 16 * 60) {
+    return false; // Young も Child も禁止
+  }
+
+  // 子供: 終了時刻が16:00を超えると大人が必要
+  if (t.age === 'Child' && endMinutes > 16 * 60) {
+    return false;
+  }
+
+  // Young: 終了時刻が18:00を超えると大人が必要
+  if (t.age === 'Young' && endMinutes > 18 * 60) {
+    return false;
+  }
+
   return true;
 };
 
@@ -182,8 +237,15 @@ const checkTimeRule = (
  * 理由の順序を安定化（README: 「同伴 → 年齢 → 座席」）
  */
 const orderReasons = (reasons: string[]): string[] => {
-  // TODO ここを実装
-  return reasons;
+  // README に従って優先順位を定義する
+  const order = [
+    MSG.NEED_ADULT, // 同伴必要
+    MSG.AGE_LIMIT, // 年齢制限
+    MSG.SEAT_LIMIT, // 座席制限
+  ];
+
+  // 優先順位に従って並べ替え
+  return order.filter((msg) => reasons.includes(msg));
 };
 
 // 重複排除（stable）
