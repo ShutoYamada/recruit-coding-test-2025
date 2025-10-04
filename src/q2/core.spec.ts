@@ -84,4 +84,25 @@ describe('Q2 core', () => {
       avgLatency: 90,
     });
   });
+
+  it('aggregate: ranks top N per date correctly', () => {
+    const lines = [
+      '2025-01-03T10:00:00Z,u1,/a,200,100',
+      '2025-01-03T11:00:00Z,u2,/a,200,100',
+      '2025-01-03T12:00:00Z,u3,/b,200,100',
+      '2025-01-03T13:00:00Z,u4,/c,200,100',
+      '2025-01-04T00:00:00Z,u1,/z,200,100',
+      '2025-01-04T01:00:00Z,u2,/y,200,100',
+    ];
+    const result = aggregate(lines, {
+      from: '2025-01-03',
+      to: '2025-01-04',
+      tz: 'jst',
+      top: 2,
+    });
+
+    const day3 = result.filter((r) => r.date === '2025-01-03');
+    expect(day3.length).toBe(2);
+    expect(day3[0].path).toBe('/a');
+  });
 });
