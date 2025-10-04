@@ -211,5 +211,111 @@ describe('Q2 core', () => {
     });
   });
 
+  describe('timezone conversion and grouping', () => {
+    it('should group by (date, path) correctly', () => {
+      // (date, path)ペアによるグルーピングとavgLatency計算のテスト
+      const result = aggregate([
+        '2025-01-02T10:00:00Z,u1,/api/orders,200,100',
+        '2025-01-02T11:00:00Z,u2,/api/orders,200,200',  
+        '2025-01-02T12:00:00Z,u3,/api/users,200,150',
+        '2025-01-02T13:00:00Z,u4,/api/orders,200,300',  // 最初の2つと同じpath
+        '2025-01-03T10:00:00Z,u5,/api/orders,200,400',  // 同じpath、異なる日付
+      ], {
+        from: '2025-01-02',
+        to: '2025-01-03',
+        tz: 'jst', 
+        top: 10
+      });
+
+      expect(result).toHaveLength(3);
+      
+      // 特定のグループを検索
+      const jan2Orders = result.find(r => r.date === '2025-01-02' && r.path === '/api/orders');
+      const jan2Users = result.find(r => r.date === '2025-01-02' && r.path === '/api/users'); 
+      const jan3Orders = result.find(r => r.date === '2025-01-03' && r.path === '/api/orders');
+      
+      // グルーピングが正しいことを確認
+      expect(jan2Orders).toBeDefined();
+      expect(jan2Orders!.count).toBe(3); // u1, u2, u4
+      expect(jan2Orders!.avgLatency).toBe(200); // Math.round((100+200+300)/3) = 200
+      
+      expect(jan2Users).toBeDefined();
+      expect(jan2Users!.count).toBe(1); // u3 
+      expect(jan2Users!.avgLatency).toBe(150);
+      
+      expect(jan3Orders).toBeDefined();
+      expect(jan3Orders!.count).toBe(1); // u5
+      expect(jan3Orders!.avgLatency).toBe(400);
+    });
+
+    it('should handle timezone boundary cases correctly', () => {
+      // タイムゾーン変換の境界ケースのテスト
+      const result = aggregate([
+        // JST境界ケース
+        '2025-01-01T14:59:59Z,u1,/api/test,200,100', // UTC 14:59 = JST 23:59 (2025-01-01)
+        '2025-01-01T15:00:00Z,u2,/api/test,200,150', // UTC 15:00 = JST 00:00 (2025-01-02) 
+        '2025-01-01T15:00:01Z,u3,/api/test,200,200', // UTC 15:00:01 = JST 00:00:01 (2025-01-02)
+      ], {
+        from: '2025-01-01',
+        to: '2025-01-02', 
+        tz: 'jst',
+        top: 10
+      });
+
+      expect(result).toHaveLength(2);
+      
+      const jan1Group = result.find(r => r.date === '2025-01-01');
+      const jan2Group = result.find(r => r.date === '2025-01-02');
+      
+      expect(jan1Group).toBeDefined();
+      expect(jan1Group!.count).toBe(1); // u1のみ
+      
+      expect(jan2Group).toBeDefined(); 
+      expect(jan2Group!.count).toBe(2); // u2とu3
+    });
+
+    it('should handle cross-year timezone conversion', () => {
+      // 年をまたぐタイムゾーン変換のテスト
+      const result = aggregate([
+        '2024-12-31T14:59:59Z,u1,/api/test,200,100', // UTC 14:59 2024 = JST 23:59 2024
+        '2024-12-31T15:00:00Z,u2,/api/test,200,150', // UTC 15:00 2024 = JST 00:00 2025
+      ], {
+        from: '2024-12-31',
+        to: '2025-01-01',
+        tz: 'jst',
+        top: 10
+      });
+
+      expect(result).toHaveLength(2);
+      
+      const dec31Group = result.find(r => r.date === '2024-12-31');
+      const jan1Group = result.find(r => r.date === '2025-01-01');
+      
+      expect(dec31Group).toBeDefined();
+      expect(dec31Group!.count).toBe(1);
+      
+      expect(jan1Group).toBeDefined();
+      expect(jan1Group!.count).toBe(1);
+    });
+
+    it('should calculate avgLatency correctly with rounding', () => {
+      // 四捨五入を含むavgLatency計算のテスト
+      const result = aggregate([
+        '2025-01-02T10:00:00Z,u1,/api/test,200,100',
+        '2025-01-02T11:00:00Z,u2,/api/test,200,110',
+        '2025-01-02T12:00:00Z,u3,/api/test,200,105',
+      ], {
+        from: '2025-01-02', 
+        to: '2025-01-02',
+        tz: 'jst',
+        top: 10
+      });
+
+      expect(result).toHaveLength(1);
+      expect(result[0].count).toBe(3);
+      expect(result[0].avgLatency).toBe(105); // Math.round((100+110+105)/3) = Math.round(315/3) = Math.round(105) = 105
+    });
+  });
+
   it.todo('aggregate basic');
 });
