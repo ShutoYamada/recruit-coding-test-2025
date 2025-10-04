@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Row } from './core.js';
-import { filterByDate, parseLines, toTZDate } from './core.js';
+import { filterByDate, groupByDatePath, parseLines, toTZDate } from './core.js';
 describe('Q2 Core Logic', () => {
   describe('parseLines', () => {
     it('should parse valid lines correctly', () => {
@@ -186,6 +186,80 @@ describe('Q2 Core Logic', () => {
 
         const result = toTZDate(utcTimestamp, 'jst');
         expect(result).toBe(expectedDateInJST);
+      });
+    });
+  });
+  describe('groupByDatePath', () => {
+    it('should group rows by date and path, calculating count and average latency', () => {
+      // 1. Arrange: Prepare sample data
+      const sampleRows: Row[] = [
+        // Group 1: 2 hits for /api/users on Jan 04 (JST)
+        {
+          timestamp: '2025-01-03T18:00:00Z',
+          userId: 'u1',
+          path: '/api/users',
+          status: 200,
+          latencyMs: 100,
+        },
+        {
+          timestamp: '2025-01-03T19:00:00Z',
+          userId: 'u2',
+          path: '/api/users',
+          status: 200,
+          latencyMs: 150,
+        },
+        // Group 2: 1 hit for /api/products on Jan 04 (JST)
+        {
+          timestamp: '2025-01-03T20:00:00Z',
+          userId: 'u3',
+          path: '/api/products',
+          status: 200,
+          latencyMs: 200,
+        },
+        // Group 3: 1 hit for /api/users on Jan 05 (JST)
+        {
+          timestamp: '2025-01-04T16:00:00Z',
+          userId: 'u4',
+          path: '/api/users',
+          status: 200,
+          latencyMs: 300,
+        },
+      ];
+
+      // 2. Act: Call the function with JST timezone
+      const result = groupByDatePath(sampleRows, 'jst');
+
+      // 3. Assert: Verify the result
+      // Expect 3 groups to be created
+      expect(result).toHaveLength(3);
+
+      // Sort the result for reliable testing
+      const sortedResult = result.sort(
+        (a, b) => a.date.localeCompare(b.date) || a.path.localeCompare(b.path)
+      );
+
+      // Check group 1: /api/products on Jan 04
+      expect(sortedResult[0]).toEqual({
+        date: '2025-01-04',
+        path: '/api/products',
+        count: 1,
+        avgLatency: 200,
+      });
+
+      // Check group 2: /api/users on Jan 04
+      expect(sortedResult[1]).toEqual({
+        date: '2025-01-04',
+        path: '/api/users',
+        count: 2,
+        avgLatency: 125, // (100 + 150) / 2 = 125
+      });
+
+      // Check group 3: /api/users on Jan 05
+      expect(sortedResult[2]).toEqual({
+        date: '2025-01-05',
+        path: '/api/users',
+        count: 1,
+        avgLatency: 300,
       });
     });
   });

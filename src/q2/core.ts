@@ -97,7 +97,7 @@ export const toTZDate = (utcIso: string, tz: TZ): string => {
   return format(toZonedTime(dateInUtc, timeZone), 'yyyy-MM-dd', { timeZone });
 };
 
-const groupByDatePath = (rows: Row[], tz: TZ) => {
+export const groupByDatePath = (rows: Row[], tz: TZ) => {
   const map = new Map<string, { sum: number; cnt: number }>();
   for (const r of rows) {
     const date = toTZDate(r.timestamp, tz);
