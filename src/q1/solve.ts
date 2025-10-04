@@ -223,8 +223,24 @@ const checkTimeRule = (
  * 理由の順序を安定化（README: 「同伴 → 年齢 → 座席」）
  */
 const orderReasons = (reasons: string[]): string[] => {
-  // TODO ここを実装
-  return reasons;
+  // 表示順序の定義
+  const priority = [
+    MSG.NEED_ADULT, // 同伴必要
+    MSG.AGE_LIMIT, // 年齢制限
+    MSG.SEAT_LIMIT, // 座席制限
+  ];
+
+  // 元配列を変更せずに新しい配列を作成してソート
+  return [...reasons].sort((a, b) => {
+    const indexA = priority.indexOf(a as typeof MSG.NEED_ADULT);
+    const indexB = priority.indexOf(b as typeof MSG.NEED_ADULT);
+
+    // 定義されていない理由は最後に配置
+    if (indexA === -1) return 1;
+    if (indexB === -1) return -1;
+
+    return indexA - indexB;
+  });
 };
 
 // 重複排除（stable）
