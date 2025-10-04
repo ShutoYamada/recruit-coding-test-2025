@@ -23,7 +23,8 @@ export type Output = Array<{
 }>;
 
 export const aggregate = (lines: string[], opt: Options): Output => {
-  const rows = parseLines(lines);
+  const contentLines = lines.slice(1);
+  const rows = parseLines(contentLines);
   const filtered = filterByDate(rows, opt.from, opt.to);
   const grouped = groupByDatePath(filtered, opt.tz);
   const ranked = rankTop(grouped, opt.top);
@@ -33,8 +34,23 @@ export const aggregate = (lines: string[], opt: Options): Output => {
 export const parseLines = (lines: string[]): Row[] => {
   const out: Row[] = [];
   for (const line of lines) {
-    const [timestamp, userId, path, status, latencyMs] = line.split(',');
-    if (!timestamp || !userId || !path || !status || !latencyMs) continue; // 壊れ行はスキップ
+    // 1行目はヘッダーのためスキップします
+    const parts = line.split(',');
+    if (parts.length !== 5) continue; // カラム数が5でない行（壊れた行）はスキップ
+
+    const [timestamp, userId, path, statusStr, latencyMsStr] = parts;
+    // いずれかのカラムが空の場合はスキップ
+    if (!timestamp || !userId || !path || !statusStr || !latencyMsStr) continue;
+
+    const status = parseInt(statusStr, 10);
+    const latencyMs = parseInt(latencyMsStr, 10);
+
+    // status または latency が有効な数値でない場合はスキップ
+    if (isNaN(status) || isNaN(latencyMs)) continue;
+
+    // timestamp が有効な日付文字列でない場合はスキップ
+    if (isNaN(new Date(timestamp).getTime())) continue;
+
     out.push({
       timestamp: timestamp.trim(),
       userId: userId.trim(),
@@ -45,7 +61,6 @@ export const parseLines = (lines: string[]): Row[] => {
   }
   return out;
 };
-
 const filterByDate = (rows: Row[], from: string, to: string): Row[] => {
   const fromT = Date.parse(from + 'T00:00:00Z');
   const toT = Date.parse(to + 'T23:59:59Z');
