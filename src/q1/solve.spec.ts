@@ -327,11 +327,11 @@ describe('Q1 solve', () => {
   it('[C12] 家族購入: 親子3世代での映画鑑賞', () => {
     const family = [
       'Adult,G,14:00,2:00,E-10', // 祖父母 - end=16:00
-      'Adult,G,14:00,2:00,E-11', // 両親 - end=16:00  
+      'Adult,G,14:00,2:00,E-11', // 両親 - end=16:00
       'Young,G,14:00,2:00,E-12', // 高校生 - end=16:00
       'Child,G,14:00,2:00,E-13', // 小学生 - end=16:00
     ].join('\n');
-    
+
     const result = solve(family);
     expect(result).toBe(['1800円', '1800円', '1200円', '800円'].join('\n'));
   });
@@ -342,37 +342,41 @@ describe('Q1 solve', () => {
       'Young,G,19:00,3:00,B-6', // end=22:00 > 18:00
       'Young,G,19:00,3:00,B-7', // end=22:00 > 18:00
     ].join('\n');
-    
+
     const result = solve(students);
     // 全員NGなので理由のみ表示
-    expect(result).toBe([
-      '対象の映画の入場には大人の同伴が必要です',
-      '対象の映画の入場には大人の同伴が必要です', 
-      '対象の映画の入場には大人の同伴が必要です'
-    ].join('\n'));
+    expect(result).toBe(
+      [
+        '対象の映画の入場には大人の同伴が必要です',
+        '対象の映画の入場には大人の同伴が必要です',
+        '対象の映画の入場には大人の同伴が必要です',
+      ].join('\n')
+    );
   });
 
   it('[C12] 混合エラー: 一部成功、一部失敗の現実的ケース', () => {
     const mixed = [
-      'Adult,G,15:00,2:00,A-1',    // OK - end=17:00
-      'Young,G,15:00,2:00,A-2',    // OK (Adultがいるため) - end=17:00
-      'Child,G,15:00,2:00,J-3',    // NG (座席制限) - end=17:00
+      'Adult,G,15:00,2:00,A-1', // OK - end=17:00
+      'Young,G,15:00,2:00,A-2', // OK (Adultがいるため) - end=17:00
+      'Child,G,15:00,2:00,J-3', // NG (座席制限) - end=17:00
       'Child,R18+,15:00,2:00,I-4', // NG (年齢制限) - end=17:00
     ].join('\n');
-    
+
     const result = solve(mixed);
     // 1つでもNGがあれば、NGの理由のみ表示（入力順で出力）
-    expect(result).toBe('対象のチケットではその座席をご利用いただけません\n対象の映画は年齢制限により閲覧できません');
+    expect(result).toBe(
+      '対象のチケットではその座席をご利用いただけません\n対象の映画は年齢制限により閲覧できません'
+    );
   });
 
   it('[C12] Adult複数による同伴効果の確認', () => {
     const multipleAdults = [
-      'Adult,G,20:00,3:00,A-1',  // end=23:00
-      'Adult,G,20:00,3:00,A-2',  // end=23:00  
-      'Young,G,20:00,3:00,A-3',  // end=23:00 > 18:00 but OK (Adult同伴)
-      'Child,G,20:00,3:00,I-4',  // end=23:00 > 16:00 but OK (Adult同伴)
+      'Adult,G,20:00,3:00,A-1', // end=23:00
+      'Adult,G,20:00,3:00,A-2', // end=23:00
+      'Young,G,20:00,3:00,A-3', // end=23:00 > 18:00 but OK (Adult同伴)
+      'Child,G,20:00,3:00,I-4', // end=23:00 > 16:00 but OK (Adult同伴)
     ].join('\n');
-    
+
     const result = solve(multipleAdults);
     expect(result).toBe(['1800円', '1800円', '1200円', '800円'].join('\n'));
   });
