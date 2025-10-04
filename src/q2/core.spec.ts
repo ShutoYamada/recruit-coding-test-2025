@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseLines } from './core.js';
+import { parseLines, aggregate } from './core.js';
 
 describe('Q2 core', () => {
   it('parseLines: skips broken rows', () => {
@@ -34,7 +34,7 @@ it('parseLines: skips rows with insufficient columns', () => {
     '2025-01-03T10:14:00Z,u3,/c,200,150',       // 正常（5カラム）
     '2025-01-03T10:15:00Z,u4',                  // カラム不足（2カラム）→ スキップ
     '',                                         // 空行 → スキップ
-    'just,some,text',                          // カラム不足（3カラム）→ スキップ
+    'just,some,text',                           // カラム不足（3カラム）→ スキップ
   ]);
   
   expect(rows.length).toBe(2);                // 正常な行のみ処理される
@@ -56,6 +56,35 @@ it('parseLines: skips rows with insufficient columns', () => {
   expect(rows[4]).toBeUndefined();            // 5番目の行は存在しない
   expect(rows[5]).toBeUndefined();            // 6番目の行は存在しない
 });
+
+ // 2. 期間フィルタ：from/to の境界含む / 範囲外除外
+ it('aggregate: includes both date boundaries', () => {
+    const csvLines = [
+      '2024-12-31T23:59:59Z,u0,/before,200,50',     // 範囲外(前)
+      '2025-01-01T00:00:00Z,u1,/start,200,100',     // from境界 
+      '2025-01-01T12:00:00Z,u2,/middle,200,150',    // 範囲内 
+      '2025-01-03T23:59:59Z,u3,/end,200,200',       // to境界 
+      '2025-01-04T00:00:00Z,u4,/after,200,250',     // 範囲外(後)
+    ];
+
+    const result = aggregate(csvLines, {
+      from: '2025-01-01',
+      to: '2025-01-03', 
+      tz: 'jst',
+      top: 10
+    });
+    
+    // 結果に含まれるpathをチェック
+    const paths = result.map(r => r.path);
+    expect(paths).toContain('/start');       // from境界含む
+    expect(paths).toContain('/middle');      // 範囲内
+    expect(paths).toContain('/end');         // to境界含む
+    expect(paths).not.toContain('/before');  // 範囲外除外
+    expect(paths).not.toContain('/after');   // 範囲外除外
+
+    expect(result.length).toBe(3);           // 有効な記録のみ
+});
+
 
   it.todo('aggregate basic');
 });
