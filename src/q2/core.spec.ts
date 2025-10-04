@@ -1,6 +1,7 @@
 /* eslint-disable max-lines-per-function */
 import { describe, expect, it } from 'vitest';
-import { parseLines, Row, filterByDate } from './core.js';
+import { parseLines, filterByDate, toTZDate } from './core.js';
+import { Row, TZ } from './core.js';
 
 describe('Q2 core', () => {
   it('parseLines: skips broken rows', () => {
@@ -165,5 +166,45 @@ describe('Q2 core', () => {
     ];
     const out = filterByDate(rows, from, to);
     expect(out.length).toBe(3);
+  });
+
+  it('toTZDate: convert UTC→JST/ICT', () => {
+    const input: [string, TZ][] = [
+      ['2025-01-01T00:00:00Z', 'jst'],
+      ['2025-01-01T00:30:00Z', 'jst'],
+      ['2025-01-01T12:30:00Z', 'jst'],
+
+      ['2025-01-01T15:00:00Z', 'jst'], // Boundary case
+      ['2025-01-01T23:30:00Z', 'jst'],
+
+      ['2025-01-01T15:00:00Z', 'ict'], 
+      ['2025-01-01T17:00:00Z', 'ict'], // Boundary case
+
+      ['2025-01-31T23:00:00Z', 'ict'], // Crosses into February
+      ['2025-02-28T23:00:00Z', 'ict'], // Crosses into March, non-leap year
+      ['2024-02-29T23:00:00Z', 'ict'], // Crosses into March, leap year
+      ['2025-04-30T23:00:00Z', 'ict'], // Crosses into May
+      
+      ['2025-12-31T23:00:00Z', 'ict'], // Crosses into next year
+    ];
+    const out = input.map((i) => toTZDate(i[0], i[1]));
+    expect(out.join('\n')).toBe([
+      '2025-01-01',
+      '2025-01-01',
+      '2025-01-01',
+
+      '2025-01-02',
+      '2025-01-02',
+
+      '2025-01-01',
+      '2025-01-02',
+
+      '2025-02-01',
+      '2025-03-01',
+      '2024-03-01',
+      '2025-05-01',
+
+      '2026-01-01',
+    ].join('\n'));
   });
 });
