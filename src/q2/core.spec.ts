@@ -88,6 +88,7 @@ describe('Q2 core - Aggregate', () => {
   });
 
   // 3. タイムゾーン：UTC→JST/ICT の変換で日付跨ぎが正しい
+  // UTC -> JST: +9時間
   it('aggregate: UTC to JST timezone conversion crosses date', () => {
     const csvLines = [
       '2025-01-01T20:00:00Z,u1,/api/test,200,100',    // UTC 20:00 → JST 05:00 (翌日)
@@ -105,6 +106,26 @@ describe('Q2 core - Aggregate', () => {
     expect(jstResult.length).toBe(2);                 // 2つの日付に分かれる
     expect(jstResult[0].date).toBe('2025-01-01');     // 14:00のレコード(同日)
     expect(jstResult[1].date).toBe('2025-01-02');     // 20:00のレコード(翌日)
+  });
+
+  // UTC -> ICT: +7時間
+  it('aggregate: UTC to ICT timezone conversion crosses date', () => {
+    const csvLines = [
+      '2025-01-01T17:00:00Z,u1,/api/test,200,100',    // UTC 17:00 → ICT 00:00 (翌日)
+      '2025-01-01T10:00:00Z,u2,/api/test,200,200',    // UTC 10:00 → ICT 17:00 (同日)
+    ];
+
+    const ictResult = aggregate(csvLines, {
+      from: '2025-01-01',
+      to: '2025-01-02',
+      tz: 'ict',
+      top: 10
+    });
+
+    // ICT変換により日付グルーピングが変わることを確認
+    expect(ictResult.length).toBe(2);                 // 2つの日付に分かれる
+    expect(ictResult[0].date).toBe('2025-01-01');     // 10:00のレコード(同日)
+    expect(ictResult[1].date).toBe('2025-01-02');     // 17:00のレコード(翌日)
   });
   
   it.todo('aggregate basic');
