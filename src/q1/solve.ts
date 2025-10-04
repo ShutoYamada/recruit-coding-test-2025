@@ -119,6 +119,15 @@ const parseLine = (line: string): Ticket | null => {
   const row = seat[1].toUpperCase();
   const col = parseInt(seat[2], 10);
 
+  // 時刻範囲の検証
+  if (startHH < 0 || startHH > 23) return null;
+  if (startMM < 0 || startMM > 59) return null;
+  if (durH < 0) return null;
+  if (durM < 0 || durM > 59) return null;
+
+  // 座席範囲の検証
+  if (col < 1 || col > 24) return null;
+
   return {
     age: ageRaw as Age,
     rating: ratingRaw as Rating,
