@@ -258,4 +258,66 @@ describe('Q1 solve', () => {
     expect(col1).toBe('800円');
     expect(col24).toBe('800円');
   });
+
+  // ------------------------------
+  // [C11] 入力フォーマットの堅牢性テスト
+  // ------------------------------
+  it('[C11] 空白文字の適切な処理', () => {
+    // 前後の空白は自動的にtrimされて正常処理される
+    const withSpaces = solve('  Adult , G , 10:00 , 1:00 , A-1  ');
+    expect(withSpaces).toBe('1800円');
+    
+    // 空行混在でも正常処理される
+    const withEmptyLines = solve('\n\nAdult,G,10:00,1:00,A-1\n\n');
+    expect(withEmptyLines).toBe('1800円');
+  });
+
+  it('[C11] 時刻フォーマットの厳密性検証', () => {
+    // 有効なフォーマット
+    const validFormats = [
+      'Adult,G,0:00,0:01,A-1',    // 最小値
+      'Adult,G,23:59,0:01,A-1',  // 最大時刻
+      'Adult,G,9:05,0:55,A-1',   // 1桁時間
+    ];
+    
+    validFormats.forEach(testCase => {
+      expect(solve(testCase)).toBe('1800円');
+    });
+    
+    // 無効なフォーマット
+    const invalidFormats = [
+      'Adult,G,24:00,1:00,A-1',  // 24時間（範囲外）
+      'Adult,G,10:60,1:00,A-1',  // 60分（範囲外）
+      'Adult,G,10:00,1:60,A-1',  // 上映時間分が60
+      'Adult,G,1000,1:00,A-1',   // コロンなし
+      'Adult,G,10:00:00,1:00,A-1', // 秒付き
+    ];
+    
+    invalidFormats.forEach(testCase => {
+      expect(solve(testCase)).toBe('不正な入力です');
+    });
+  });
+
+  it('[C11] 座席表記の大文字小文字処理', () => {
+    // 小文字の座席行は大文字に正規化される
+    const lowercase = solve('Child,G,10:00,1:00,i-1');
+    const uppercase = solve('Child,G,10:00,1:00,I-1');
+    
+    expect(lowercase).toBe('800円');
+    expect(uppercase).toBe('800円');
+  });
+
+  it('[C11] 異常なカラム数・区切り文字の処理', () => {
+    const abnormalCases = [
+      'Adult,G,10:00,1:00,A-1,extra',  // カラム過多
+      'Adult,G,10:00,1:00',            // カラム不足
+      'Adult;G;10:00;1:00;A-1',        // 間違った区切り文字
+      ',Adult,G,10:00,1:00,A-1',       // 先頭カンマ
+      'Adult,G,10:00,1:00,A-1,',       // 末尾カンマ
+    ];
+    
+    abnormalCases.forEach(testCase => {
+      expect(solve(testCase)).toBe('不正な入力です');
+    });
+  });
 });
