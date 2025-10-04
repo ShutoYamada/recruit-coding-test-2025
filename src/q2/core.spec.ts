@@ -170,6 +170,52 @@ describe('Q2 core - Aggregation Logic', () => {
     expect(group3!.avgLatency).toBe(350);
   });
 
+  // 5. 上位N：count降順、path昇順で日付ごとにtop制限
+  it('aggregate: top N ranking per date with count desc, path asc', () => {
+    const csvLines = [
+      // 2025-01-01: 4 paths
+      '2025-01-01T10:00:00Z,u1,/api/orders,200,100',   // JST: 2025-01-01 19:00
+      '2025-01-01T11:00:00Z,u2,/api/orders,200,200',   // JST: 2025-01-01 20:00
+      '2025-01-01T12:00:00Z,u3,/api/orders,200,150',   // JST: 2025-01-01 21:00
+      '2025-01-01T13:00:00Z,u4,/api/users,200,120',    // JST: 2025-01-01 22:00
+      '2025-01-01T14:00:00Z,u5,/api/users,200,180',    // JST: 2025-01-01 23:00
+      '2025-01-01T15:00:00Z,u6,/api/products,200,90',  // JST: 2025-01-02 00:00 (翌日)
+      '2025-01-01T16:00:00Z,u7,/api/products,200,110', // JST: 2025-01-02 01:00 (翌日)
+      '2025-01-01T17:00:00Z,u8,/api/auth,200,50',      // JST: 2025-01-02 02:00 (翌日)
+      
+      // 2025-01-02: 3 paths  
+      '2025-01-02T10:00:00Z,u9,/api/orders,200,200',   // JST: 2025-01-02 19:00
+      '2025-01-02T11:00:00Z,u10,/api/users,200,150',   // JST: 2025-01-02 20:00
+      '2025-01-02T12:00:00Z,u11,/api/auth,200,100',    // JST: 2025-01-02 21:00
+    ];
+
+    const result = aggregate(csvLines, {
+      from: '2025-01-01',
+      to: '2025-01-02',
+      tz: 'jst',
+      top: 2  // 各日付でtop 2のみ
+    });
+
+    // 結果の検証
+    expect(result.length).toBe(4);  // 2日 × top2 = 4 records
+
+    // 2025-01-01の結果をチェック (JST変換後)
+    const date1Results = result.filter(r => r.date === '2025-01-01');
+    expect(date1Results.length).toBe(2);
+    expect(date1Results[0].path).toBe('/api/orders');     // count=3が最高
+    expect(date1Results[0].count).toBe(3);
+    expect(date1Results[1].path).toBe('/api/users');      // count=2でpath昇順
+    expect(date1Results[1].count).toBe(2);
+
+    // 2025-01-02の結果をチェック (JST変換後)
+    const date2Results = result.filter(r => r.date === '2025-01-02');
+    expect(date2Results.length).toBe(2);
+    expect(date2Results[0].path).toBe('/api/auth');       // count=2でpath昇順 (auth < products)
+    expect(date2Results[0].count).toBe(2);
+    expect(date2Results[1].path).toBe('/api/products');   // count=2でpath昇順
+    expect(date2Results[1].count).toBe(2);
+  });
+
   
   it.todo('aggregate basic');
 
