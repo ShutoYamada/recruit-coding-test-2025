@@ -1,7 +1,7 @@
 /* eslint-disable max-lines-per-function */
 import { describe, expect, it } from 'vitest';
-import { parseLines, filterByDate, toTZDate, aggregate } from './core.js';
-import { Row, TZ, Options, Output } from './core.js';
+import { parseLines, toTZDate, aggregate } from './core.js';
+import { TZ, Options, Output } from './core.js';
 
 describe('Q2 core', () => {
   it('parseLines: skips broken rows', () => {
@@ -124,47 +124,21 @@ describe('Q2 core', () => {
     expect(rows.length).toBe(1);
   });
 
-  it('filterByDate: remove out-of-range', () => {
-    const from = '2025-01-03';
-    const to = '2025-01-13';
-    const rows: Row[] = [
-      {
-        timestamp: '2025-01-03T10:12:00Z',
-        userId: 'u1',
-        path: '/a',
-        status: 200,
-        latencyMs: 100,
-      }, 
-      {
-        timestamp: '2025-01-13T10:12:00Z',
-        userId: 'u1',
-        path: '/a',
-        status: 200,
-        latencyMs: 100,
-      }, 
-      {
-        timestamp: '2025-01-05T10:12:00Z',
-        userId: 'u1',
-        path: '/a',
-        status: 200,
-        latencyMs: 100,
-      }, 
-      {
-        timestamp: '2025-01-01T10:12:00Z', // Invalid because it is not within (from - to)
-        userId: 'u1',
-        path: '/a',
-        status: 200,
-        latencyMs: 100,
-      }, 
-      {
-        timestamp: '2025-01-15T10:12:00Z', // Invalid because it is not within (from - to)
-        userId: 'u1',
-        path: '/a',
-        status: 200,
-        latencyMs: 100,
-      }, 
-    ];
-    const out = filterByDate(rows, from, to);
+  it('aggregate: remove out-of-range', () => {
+    const options: Options = {
+      from: '2025-01-03',
+      to: '2025-01-13',
+      tz: 'jst',
+      top: 3
+    };
+    const input: string[] = [
+      '2025-01-03T10:12:00Z,u1,/api/users,200,120',
+      '2025-01-13T10:12:00Z,u1,/api/users,200,120',
+      '2025-01-05T10:12:00Z,u1,/api/users,200,120',
+      '2025-01-01T10:12:00Z,u1,/api/users,200,120', // Invalid because it is not within (from - to)
+      '2025-01-15T10:12:00Z,u1,/api/users,200,120', // Invalid because it is not within (from - to)
+    ]
+    const out = aggregate(input, options);
     expect(out.length).toBe(3);
   });
 
@@ -243,5 +217,7 @@ describe('Q2 core', () => {
       { date: '2025-01-05', path: '/api/orders', count: 1, avgLatency: 60  },
     ]);
   });
+
+  
 
 });
