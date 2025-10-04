@@ -219,12 +219,21 @@ const checkTimeRule = (
   return true;
 };
 
+const REASON_ORDER: Record<string, number> = {
+  [MSG.NEED_ADULT]: 1,
+  [MSG.AGE_LIMIT]: 2,
+  [MSG.SEAT_LIMIT]: 3,
+};
+
 /**
  * 理由の順序を安定化（README: 「同伴 → 年齢 → 座席」）
  */
 const orderReasons = (reasons: string[]): string[] => {
-  // TODO ここを実装
-  return reasons;
+  // TODO [DONE]
+  // Sắp xếp dựa trên thứ tự ưu tiên đã định nghĩa
+  return reasons.sort((a, b) => {
+    return (REASON_ORDER[a] || 99) - (REASON_ORDER[b] || 99);
+  });
 };
 
 // 重複排除（stable）
