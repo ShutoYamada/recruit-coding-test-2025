@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-
 export type Age = 'Adult' | 'Young' | 'Child';
 export type Rating = 'G' | 'PG-12' | 'R18+';
 
@@ -87,8 +85,14 @@ export const solve = (input: string): string => {
   }
 
   // TODO 「全体不可」のときは価格を出さず、NG行の理由だけを出力する
-
-  return evaluated.map((e) => e.text).join('\n');
+  if (anyNg) {
+    return evaluated
+      .map((e) => (e.ok ? '' : e.text))
+      .filter(Boolean)
+      .join('\n');
+  } else {
+    return evaluated.map((e) => e.text).join('\n');
+  }
 };
 
 /**
@@ -118,6 +122,10 @@ const parseLine = (line: string): Ticket | null => {
   const durM = parseInt(dur[2], 10);
   const row = seat[1].toUpperCase();
   const col = parseInt(seat[2], 10);
+  if (startHH < 0 || startHH > 23 || startMM < 0 || startMM > 59) return null;
+  if (durH < 0 || durM < 0 || durM > 59) return null;
+
+  if (col < 1 || col > 24) return null;
 
   return {
     age: ageRaw as Age,
@@ -148,8 +156,27 @@ const checkRating = (
   rating: Rating,
   hasAdultInSet: boolean
 ): boolean => {
-  // TODO ここを実装
-  return true;
+  switch (rating) {
+    case 'G':
+      return true;
+
+    case 'PG-12':
+      // PG-12: Child needs to be accompanied by an Adult (Child: NG if no Adult)
+      if (age === 'Child' && !hasAdultInSet) {
+        return false;
+      }
+      return true;
+
+    case 'R18+':
+      // R18+: Only Adults allowed (Young/Child: NG)
+      if (age !== 'Adult') {
+        return false;
+      }
+      return true;
+
+    default:
+      return true;
+  }
 };
 
 /**
@@ -157,7 +184,15 @@ const checkRating = (
  *  - J〜L は Child 不可
  */
 const checkSeat = (t: Ticket): boolean => {
-  // TODO ここを実装
+  if (t.age === 'Child') {
+    const rowCode = t.row.charCodeAt(0);
+    const J_CODE = 'J'.charCodeAt(0);
+    const L_CODE = 'L'.charCodeAt(0);
+
+    if (rowCode >= J_CODE && rowCode <= L_CODE) {
+      return false;
+    }
+  }
   return true;
 };
 
@@ -174,16 +209,38 @@ const checkTimeRule = (
   hasAdultInSet: boolean,
   hasChildInSet: boolean
 ): boolean => {
-  // TODO ここを実装
+  if (hasAdultInSet) {
+    return true;
+  }
+
+  const END_LIMIT_CHILD = 16 * 60;
+  const END_LIMIT_YOUNG = 18 * 60;
+
+  if (hasChildInSet && endMinutes > END_LIMIT_CHILD) {
+    return false;
+  }
+
+  if (t.age === 'Young' && endMinutes > END_LIMIT_YOUNG) {
+    return false;
+  }
+
   return true;
+};
+
+const REASON_ORDER: Record<string, number> = {
+  [MSG.NEED_ADULT]: 1,
+  [MSG.AGE_LIMIT]: 2,
+  [MSG.SEAT_LIMIT]: 3,
 };
 
 /**
  * 理由の順序を安定化（README: 「同伴 → 年齢 → 座席」）
  */
 const orderReasons = (reasons: string[]): string[] => {
-  // TODO ここを実装
-  return reasons;
+  // TODO [DONE]
+  return reasons.sort((a, b) => {
+    return (REASON_ORDER[a] || 99) - (REASON_ORDER[b] || 99);
+  });
 };
 
 // 重複排除（stable）
