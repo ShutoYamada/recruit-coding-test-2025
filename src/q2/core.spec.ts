@@ -315,90 +315,182 @@ describe('Q2 core', () => {
       expect(result[0].count).toBe(3);
       expect(result[0].avgLatency).toBe(105); // Math.round((100+110+105)/3) = Math.round(315/3) = Math.round(105) = 105
     });
+  });
 
-    it('should count and calculate avgLatency for multiple entries in same (date, path) group', () => {
-      // 同じ(date, path)グループに属する複数エントリのcount計算とavgLatency計算のテスト
+  describe('Top N ranking and tie-breaking', () => {
+    it('should return top N paths per date based on count', () => {
+      // 日付ごとにcount順でトップNを取得するテスト
       const result = aggregate([
-        // 同じグループ: 2025-01-02 + /api/orders (JST)
-        '2025-01-02T08:00:00Z,u1,/api/orders,200,120', // JST 17:00 2025-01-02
-        '2025-01-02T10:30:00Z,u2,/api/orders,200,180', // JST 19:30 2025-01-02
-        '2025-01-02T12:45:00Z,u3,/api/orders,200,150', // JST 21:45 2025-01-02
-        '2025-01-02T13:15:00Z,u4,/api/orders,200,200', // JST 22:15 2025-01-02
-        '2025-01-02T14:30:00Z,u5,/api/orders,200,100', // JST 23:30 2025-01-02
+        // 2025-01-02のデータ
+        '2025-01-02T10:00:00Z,u1,/api/orders,200,100',
+        '2025-01-02T10:01:00Z,u2,/api/orders,200,110', // count=2
+        '2025-01-02T10:02:00Z,u3,/api/users,200,120', // count=1
+        '2025-01-02T10:03:00Z,u4,/api/products,200,130',
+        '2025-01-02T10:04:00Z,u5,/api/products,200,140',
+        '2025-01-02T10:05:00Z,u6,/api/products,200,150', // count=3 (highest)
 
-        // 異なるグループ: 2025-01-02 + /api/users (JST)
-        '2025-01-02T09:00:00Z,u6,/api/users,200,300', // JST 18:00 2025-01-02
-        '2025-01-02T11:00:00Z,u7,/api/users,200,250', // JST 20:00 2025-01-02
-
-        // 異なるグループ: 2025-01-03 + /api/orders (JST - 日付が異なる)
-        '2025-01-02T16:00:00Z,u8,/api/orders,200,160', // JST 01:00 2025-01-03
+        // 2025-01-03のデータ
+        '2025-01-03T10:00:00Z,u7,/api/auth,200,200',
+        '2025-01-03T10:01:00Z,u8,/api/auth,200,210', // count=2
+        '2025-01-03T10:02:00Z,u9,/api/stats,200,220', // count=1
       ], {
         from: '2025-01-02',
         to: '2025-01-03',
         tz: 'jst',
-        top: 10
+        top: 2 // 各日付でトップ2のみ
       });
 
-      expect(result).toHaveLength(3);
+      // 各日付でトップ2のパスのみが返される
+      const jan2Results = result.filter(r => r.date === '2025-01-02');
+      const jan3Results = result.filter(r => r.date === '2025-01-03');
 
-      // 2025-01-02 /api/orders グループの検証
-      const jan2Orders = result.find(r => r.date === '2025-01-02' && r.path === '/api/orders');
-      expect(jan2Orders).toBeDefined();
-      expect(jan2Orders!.count).toBe(5); // u1, u2, u3, u4, u5
-      expect(jan2Orders!.avgLatency).toBe(150); // Math.round((120+180+150+200+100)/5) = Math.round(750/5) = 150
+      expect(jan2Results).toHaveLength(2);
+      expect(jan3Results).toHaveLength(2);
 
-      // 2025-01-02 /api/users グループの検証
-      const jan2Users = result.find(r => r.date === '2025-01-02' && r.path === '/api/users');
-      expect(jan2Users).toBeDefined();
-      expect(jan2Users!.count).toBe(2); // u6, u7
-      expect(jan2Users!.avgLatency).toBe(275); // Math.round((300+250)/2) = Math.round(550/2) = 275
+      // 2025-01-02: /api/products (count=3) と /api/orders (count=2) がトップ2
+      expect(jan2Results[0].path).toBe('/api/products');
+      expect(jan2Results[0].count).toBe(3);
+      expect(jan2Results[1].path).toBe('/api/orders');
+      expect(jan2Results[1].count).toBe(2);
 
-      // 2025-01-03 /api/orders グループの検証
-      const jan3Orders = result.find(r => r.date === '2025-01-03' && r.path === '/api/orders');
-      expect(jan3Orders).toBeDefined();
-      expect(jan3Orders!.count).toBe(1); // u8
-      expect(jan3Orders!.avgLatency).toBe(160);
+      // 2025-01-03: /api/auth (count=2) と /api/stats (count=1) がトップ2
+      expect(jan3Results[0].path).toBe('/api/auth');
+      expect(jan3Results[0].count).toBe(2);
+      expect(jan3Results[1].path).toBe('/api/stats');
+      expect(jan3Results[1].count).toBe(1);
     });
 
-    it('should handle decimal avgLatency rounding correctly', () => {
-      // 小数点を含むavgLatency四捨五入の正確性テスト
+    it('should handle tie-breaking by path name alphabetically', () => {
+      // 同じcountの場合はpath名でアルファベット順にソートするテスト
       const result = aggregate([
-        // グループ1: 平均が小数点.5未満の場合（切り捨て）
-        '2025-01-02T10:00:00Z,u1,/api/test1,200,100',
-        '2025-01-02T11:00:00Z,u2,/api/test1,200,102', // 平均 = 101.0
+        // 全て同じcount=2になるように設定
+        '2025-01-02T10:00:00Z,u1,/api/zebra,200,100',
+        '2025-01-02T10:01:00Z,u2,/api/zebra,200,110', // count=2
 
-        // グループ2: 平均が小数点.5の場合（切り上げ）
-        '2025-01-02T10:00:00Z,u3,/api/test2,200,100',
-        '2025-01-02T11:00:00Z,u4,/api/test2,200,101', // 平均 = 100.5 → 101
+        '2025-01-02T10:02:00Z,u3,/api/beta,200,120',
+        '2025-01-02T10:03:00Z,u4,/api/beta,200,130', // count=2
 
-        // グループ3: 平均が小数点.5超の場合（切り上げ）
-        '2025-01-02T10:00:00Z,u5,/api/test3,200,100',
-        '2025-01-02T11:00:00Z,u6,/api/test3,200,103', // 平均 = 101.5 → 102
-
-        // グループ4: より複雑な小数点ケース
-        '2025-01-02T10:00:00Z,u7,/api/test4,200,133',
-        '2025-01-02T11:00:00Z,u8,/api/test4,200,134',
-        '2025-01-02T12:00:00Z,u9,/api/test4,200,135', // 平均 = 134.0
+        '2025-01-02T10:04:00Z,u5,/api/alpha,200,140',
+        '2025-01-02T10:05:00Z,u6,/api/alpha,200,150', // count=2
       ], {
         from: '2025-01-02',
         to: '2025-01-02',
         tz: 'jst',
-        top: 10
+        top: 10 // 全て取得
       });
 
-      expect(result).toHaveLength(4);
+      expect(result).toHaveLength(3);
 
-      const test1 = result.find(r => r.path === '/api/test1');
-      expect(test1!.avgLatency).toBe(101); // (100+102)/2 = 101.0 → 101
+      // 同じcount=2だが、path名でアルファベット順になっていることを確認
+      expect(result[0].path).toBe('/api/alpha'); // アルファベット順で最初
+      expect(result[0].count).toBe(2);
+      expect(result[1].path).toBe('/api/beta'); // アルファベット順で2番目
+      expect(result[1].count).toBe(2);
+      expect(result[2].path).toBe('/api/zebra'); // アルファベット順で最後
+      expect(result[2].count).toBe(2);
+    });
 
-      const test2 = result.find(r => r.path === '/api/test2');
-      expect(test2!.avgLatency).toBe(101); // (100+101)/2 = 100.5 → 101
+    it('should handle mixed count and tie-breaking scenarios', () => {
+      // countが異なる場合とtie-breakが混在するテスト
+      const result = aggregate([
+        // count=3のグループ
+        '2025-01-02T10:00:00Z,u1,/api/orders,200,100',
+        '2025-01-02T10:01:00Z,u2,/api/orders,200,110',
+        '2025-01-02T10:02:00Z,u3,/api/orders,200,120',
 
-      const test3 = result.find(r => r.path === '/api/test3');
-      expect(test3!.avgLatency).toBe(102); // (100+103)/2 = 101.5 → 102
+        // count=2のグループ（アルファベット順でテスト）
+        '2025-01-02T10:03:00Z,u4,/api/users,200,130',
+        '2025-01-02T10:04:00Z,u5,/api/users,200,140',
 
-      const test4 = result.find(r => r.path === '/api/test4');
-      expect(test4!.avgLatency).toBe(134); // (133+134+135)/3 = 134.0 → 134
+        '2025-01-02T10:05:00Z,u6,/api/products,200,150',
+        '2025-01-02T10:06:00Z,u7,/api/products,200,160',
+
+        // count=1のグループ
+        '2025-01-02T10:07:00Z,u8,/api/stats,200,170',
+      ], {
+        from: '2025-01-02',
+        to: '2025-01-02',
+        tz: 'jst',
+        top: 3 // トップ3のみ
+      });
+
+      expect(result).toHaveLength(3);
+
+      // count DESC優先、同じcountならpath ASC
+      expect(result[0].path).toBe('/api/orders');
+      expect(result[0].count).toBe(3); // 最高count
+
+      expect(result[1].path).toBe('/api/products'); // アルファベット順でusersより前
+      expect(result[1].count).toBe(2);
+
+      expect(result[2].path).toBe('/api/users'); // アルファベット順でproductsより後
+      expect(result[2].count).toBe(2);
+
+      // /api/stats (count=1) はトップ3に入らない
+    });
+
+    it('should respect top limit across multiple dates', () => {
+      // 複数日付でtop制限が正しく適用されるテスト
+      const result = aggregate([
+        // 2025-01-02: 4つのパス
+        '2025-01-02T10:00:00Z,u1,/api/a,200,100',
+        '2025-01-02T10:01:00Z,u2,/api/a,200,110',
+        '2025-01-02T10:02:00Z,u3,/api/a,200,120', // count=3
+
+        '2025-01-02T10:03:00Z,u4,/api/b,200,130',
+        '2025-01-02T10:04:00Z,u5,/api/b,200,140', // count=2
+
+        '2025-01-02T10:05:00Z,u6,/api/c,200,150', // count=1
+        '2025-01-02T10:06:00Z,u7,/api/d,200,160', // count=1
+
+        // 2025-01-03: 3つのパス
+        '2025-01-03T10:00:00Z,u8,/api/x,200,200',
+        '2025-01-03T10:01:00Z,u9,/api/x,200,210', // count=2
+
+        '2025-01-03T10:02:00Z,u10,/api/y,200,220', // count=1
+        '2025-01-03T10:03:00Z,u11,/api/z,200,230', // count=1
+      ], {
+        from: '2025-01-02',
+        to: '2025-01-03',
+        tz: 'jst',
+        top: 2 // 各日付でトップ2のみ
+      });
+
+      // 各日付で最大2つまで
+      const jan2Results = result.filter(r => r.date === '2025-01-02');
+      const jan3Results = result.filter(r => r.date === '2025-01-03');
+
+      expect(jan2Results).toHaveLength(2); // /api/a (count=3), /api/b (count=2)
+      expect(jan3Results).toHaveLength(2); // /api/x (count=2), /api/y か /api/z のどちらか (count=1, アルファベット順)
+
+      // 2025-01-02の結果確認
+      expect(jan2Results[0].path).toBe('/api/a');
+      expect(jan2Results[0].count).toBe(3);
+      expect(jan2Results[1].path).toBe('/api/b');
+      expect(jan2Results[1].count).toBe(2);
+
+      // 2025-01-03の結果確認
+      expect(jan3Results[0].path).toBe('/api/x');
+      expect(jan3Results[0].count).toBe(2);
+      expect(jan3Results[1].path).toBe('/api/y'); // アルファベット順で/api/zより前
+      expect(jan3Results[1].count).toBe(1);
+    });
+
+    it('should handle edge case when top is larger than available paths', () => {
+      // top数が利用可能なパス数より大きい場合のテスト
+      const result = aggregate([
+        '2025-01-02T10:00:00Z,u1,/api/orders,200,100',
+        '2025-01-02T10:01:00Z,u2,/api/users,200,110',
+      ], {
+        from: '2025-01-02',
+        to: '2025-01-02',
+        tz: 'jst',
+        top: 10 // 実際のパス数(2)より大きい
+      });
+
+      expect(result).toHaveLength(2); // 利用可能な全パスが返される
+      expect(result[0].path).toBe('/api/orders');
+      expect(result[1].path).toBe('/api/users');
     });
   });
 
