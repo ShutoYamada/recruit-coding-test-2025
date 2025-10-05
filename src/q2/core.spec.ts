@@ -251,7 +251,65 @@ describe('Q2 core - Output Sorting', () => {
     expect(result[4]).toMatchObject({ date: '2025-01-02', path: '/api/users', count: 1 });      
   });
 
-  
-  it.todo('aggregate basic');
+  // 7. サンプル拡張：同一日複数パス/同数タイ/大きめデータの総合テスト
+  it('aggregate: comprehensive test with multiple paths, ties, and larger dataset', () => {
+    const csvLines = [
+      // 2025-01-01: 複数パスでの複雑なケース
+      '2025-01-01T10:00:00Z,u01,/api/orders,200,100',
+      '2025-01-01T10:05:00Z,u02,/api/orders,200,120',
+      '2025-01-01T10:10:00Z,u03,/api/orders,500,80',     // 異なるステータス
+      '2025-01-01T10:15:00Z,u04,/api/users,200,200',
+      '2025-01-01T10:20:00Z,u05,/api/users,200,180',
+      '2025-01-01T10:25:00Z,u06,/api/users,404,150',     // 異なるステータス
+      '2025-01-01T10:30:00Z,u07,/api/products,200,90',
+      '2025-01-01T10:35:00Z,u08,/api/products,200,110',
+      '2025-01-01T10:40:00Z,u09,/api/auth,200,50',
+      '2025-01-01T10:45:00Z,u10,/api/settings,200,300',
+      '2025-01-01T10:50:00Z,u11,/api/settings,200,250',
+      
+      // 2025-01-02: 同数タイのケース
+      '2025-01-02T10:00:00Z,u12,/api/orders,200,400',
+      '2025-01-02T10:05:00Z,u13,/api/orders,200,350',
+      '2025-01-02T10:10:00Z,u14,/api/users,200,220',
+      '2025-01-02T10:15:00Z,u15,/api/users,200,280',
+      '2025-01-02T10:20:00Z,u16,/api/products,200,160',
+      '2025-01-02T10:25:00Z,u17,/api/products,200,140',
+      '2025-01-02T10:30:00Z,u18,/api/auth,200,75',
+      '2025-01-02T10:35:00Z,u19,/api/auth,200,125',
+      
+      // 2025-01-03: 少数パス
+      '2025-01-03T10:00:00Z,u20,/api/orders,200,500',
+      '2025-01-03T10:05:00Z,u21,/api/health,200,10',
+    ];
 
+    const result = aggregate(csvLines, {
+      from: '2025-01-01',
+      to: '2025-01-03',
+      tz: 'jst',
+      top: 3  // 各日付でtop 3のみ
+    });
+
+    // 結果の検証
+    expect(result.length).toBe(8);  // 3日間でtop3ずつ（実際は3+3+2=8）
+
+    // 2025-01-01の検証 (6パス → top3)
+    const date1Results = result.filter(r => r.date === '2025-01-01');
+    expect(date1Results.length).toBe(3);
+    expect(date1Results[0]).toMatchObject({ path: '/api/orders', count: 3, avgLatency: 100 });
+    expect(date1Results[1]).toMatchObject({ path: '/api/users', count: 3, avgLatency: 177 });
+    expect(date1Results[2]).toMatchObject({ path: '/api/products', count: 2, avgLatency: 100 });
+
+    // 2025-01-02の検証 (4パス全て同数 → path昇順でtop3)
+    const date2Results = result.filter(r => r.date === '2025-01-02');
+    expect(date2Results.length).toBe(3);
+    expect(date2Results[0]).toMatchObject({ path: '/api/auth', count: 2, avgLatency: 100 });
+    expect(date2Results[1]).toMatchObject({ path: '/api/orders', count: 2, avgLatency: 375 });
+    expect(date2Results[2]).toMatchObject({ path: '/api/products', count: 2, avgLatency: 150 });
+
+    // 2025-01-03の検証 (2パス → 全て取得)
+    const date3Results = result.filter(r => r.date === '2025-01-03');
+    expect(date3Results.length).toBe(2);
+    expect(date3Results[0]).toMatchObject({ path: '/api/health', count: 1, avgLatency: 10 });
+    expect(date3Results[1]).toMatchObject({ path: '/api/orders', count: 1, avgLatency: 500 });
+  });
 });
