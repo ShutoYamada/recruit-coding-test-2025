@@ -227,6 +227,92 @@ describe('Q2 core', () => {
     ]);
   });
 
-  
+  it('aggregate: Top N: per day, sort by count DESC, path ASC', () => {
+    const options: Options = {
+      from: '2025-01-01',
+      to: '2025-01-31',
+      tz: 'jst',
+      top: 2
+    };
+
+    const input: string[][] = [
+      // users: 1, orders: 2
+      [
+        '2025-01-03T10:12:00Z,u1,/api/users,200,100',
+        '2025-01-03T10:12:00Z,u1,/api/orders,200,100',
+        '2025-01-03T10:12:00Z,u2,/api/orders,200,100',
+      ],
+      // users: 1, orders: 1
+      [
+        '2025-01-03T10:12:00Z,u1,/api/orders,200,100',
+        '2025-01-03T10:12:00Z,u1,/api/users,200,100',
+      ],
+      // users: 1, orders: 1, change input order to test sorting when counts are equal
+      [
+        '2025-01-03T10:12:00Z,u1,/api/users,200,100',
+        '2025-01-03T10:12:00Z,u1,/api/orders,200,100',
+      ],
+      // users: 1, orders: 1, login: 1
+      [
+        '2025-01-03T10:12:00Z,u1,/api/users,200,100',
+        '2025-01-03T10:12:00Z,u1,/api/orders,200,100',
+        '2025-01-03T10:12:00Z,u1,/api/login,200,100',
+      ],
+      // users: 2, orders: 1
+      [
+        '2025-01-03T10:12:00Z,u1,/api/users,200,100',
+        '2025-01-03T10:12:00Z,u2,/api/users,200,100',
+        '2025-01-03T10:12:00Z,u1,/api/orders,200,100',
+      ],
+      // users: 1, orders: 2, login: 3
+      [
+        '2025-01-03T10:12:00Z,u1,/api/users,200,100',
+        '2025-01-03T10:12:00Z,u1,/api/orders,200,100',
+        '2025-01-03T10:12:00Z,u2,/api/orders,200,100',
+        '2025-01-03T10:12:00Z,u1,/api/login,200,100',
+        '2025-01-03T10:12:00Z,u2,/api/login,200,100',
+        '2025-01-03T10:12:00Z,u3,/api/login,200,100',
+      ],
+    ];
+
+    const out = input.map((i) => 
+      aggregate(i, options)
+        .map((r) => ({
+          date: r.date, 
+          path: r.path, 
+          count: r.count
+          // no need to check avgLatency
+        }))
+    );
+
+    expect(out).toEqual([
+      [
+        { date: '2025-01-03', path: '/api/orders', count: 2 },
+        { date: '2025-01-03', path: '/api/users', count: 1 },
+      ],
+      [
+        { date: '2025-01-03', path: '/api/orders', count: 1 },
+        { date: '2025-01-03', path: '/api/users', count: 1 },
+      ],
+      // the result must be the same as the one above
+      [
+        { date: '2025-01-03', path: '/api/orders', count: 1 },
+        { date: '2025-01-03', path: '/api/users', count: 1 },
+      ],
+      [
+        { date: '2025-01-03', path: '/api/login', count: 1 },
+        { date: '2025-01-03', path: '/api/orders', count: 1 },
+      ],
+      [
+        { date: '2025-01-03', path: '/api/users', count: 2 },
+        { date: '2025-01-03', path: '/api/orders', count: 1 },
+      ],
+      // return 2 results (login & orders) because top = 2
+      [
+        { date: '2025-01-03', path: '/api/login', count: 3 },
+        { date: '2025-01-03', path: '/api/orders', count: 2 },
+      ]
+    ]);
+  });
 
 });
