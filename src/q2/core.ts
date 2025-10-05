@@ -44,6 +44,7 @@ export const parseLines = (lines: string[]): Row[] => {
     if(!isValidTimestamp(timestamp)) continue;
     if(!isValidUserId(userId)) continue;
     if(!isValidPath(path)) continue;
+    if(!isValidStatus(status)) continue;
     if(!isValidLatency(latencyMs)) continue;
 
     out.push({
@@ -88,6 +89,20 @@ const isValidPath = (p: string): boolean => {
   const PATH_RE = /^(?!.*\/\/)(?!.*\s)\/(?:[A-Za-z0-9._-]|%(?:[0-9A-Fa-f]{2})|\/)*$/;
   if (typeof p !== "string" || p.length === 0) return false;
   return PATH_RE.test(p);
+}
+
+const isValidStatus = (s: string): boolean => {
+  if (typeof s !== "string" || s.length === 0) return false;
+
+  // すべての文字が数字かどうかをチェックする
+  for (let i = 0; i < s.length; i++) {
+    const code = s.charCodeAt(i);
+    if (code < 48 || code > 57) return false; // 0–9
+  }
+
+  const num = Number(s);
+  if (!Number.isInteger(num)) return false;
+  return num >= 100 && num <= 599;
 }
 
 const isValidUserId = (s: string): boolean => {
