@@ -50,6 +50,9 @@ export const solve = (input: string): string => {
     tickets.push(t);
   }
 
+  // ★注意: 現在の実装では、全てのチケットが同じ rating・上映時刻・上映時間であることを前提としており、
+  // 2枚目以降のチケットでこれらが異なる場合の整合性チェックは行っていません。
+  // （例: 2枚目以降の rating や時刻が自動的に1枚目と同じになるかは未定義。必要に応じて追加実装・テストが必要です）
   // セット属性（同一上映前提）
   const hasAdult = tickets.some((t) => t.age === 'Adult');
   const hasChild = tickets.some((t) => t.age === 'Child'); // C5 で使用（グループ規則）
