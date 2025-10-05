@@ -33,19 +33,32 @@ export const aggregate = (lines: string[], opt: Options): Output => {
 export const parseLines = (lines: string[]): Row[] => {
   const out: Row[] = [];
   for (const line of lines) {
-    const [timestamp, userId, path, status, latencyMs] = line.split(',');
-    if (!timestamp || !userId || !path || !status || !latencyMs) continue; // 壊れ行はスキップ
+     const parts = line.split(',').map(p => p.trim());
+    // 列が5つでない行はスキップ (skip if the line does not have exactly 5 columns)
+    if(parts.length !== 5) continue;
+    const [timestamp, userId, path, statusStr, latencyStr] = line.split(',');
+
+    // 壊れ行はスキップする (skip broken rows)
+    if (!timestamp || !userId || !path || !statusStr || !latencyStr) continue;
+
+    const status = Number(statusStr);
+    const latencyMs = Number(latencyStr);
+
+    // 数値に変換できなければスキップ (skip if not valid numbers)
+    if (Number.isNaN(status) || Number.isNaN(latencyMs)) continue;
+
+    // timestampが有効な日付でない場合はスキップ (skip if timestamp is not a valid date)
+    if(Number.isNaN(Date.parse(timestamp))) continue;
     out.push({
       timestamp: timestamp.trim(),
       userId: userId.trim(),
       path: path.trim(),
-      status: Number(status),
-      latencyMs: Number(latencyMs),
+      status,
+      latencyMs,
     });
   }
   return out;
 };
-
 const filterByDate = (rows: Row[], from: string, to: string): Row[] => {
   const fromT = Date.parse(from + 'T00:00:00Z');
   const toT = Date.parse(to + 'T23:59:59Z');
