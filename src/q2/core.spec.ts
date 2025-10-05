@@ -216,6 +216,17 @@ describe('Q2 core', () => {
       '2025-01-04T10:12:00Z,u5,/api/orders,200,100'],
       // 2025-01-05 x orders
       ['2025-01-05T10:12:00Z,u5,/api/orders,200,60'],
+      // 2025-01-06 x orders (rounding check: 1.33 -> 1)
+      ['2025-01-06T10:12:00Z,u3,/api/orders,200,1',
+      '2025-01-06T10:12:00Z,u4,/api/orders,200,1',
+      '2025-01-06T10:12:00Z,u5,/api/orders,200,2'],
+      // 2025-01-07 x orders (rounding check: 1.67 -> 2)
+      ['2025-01-07T10:12:00Z,u3,/api/orders,200,1',
+      '2025-01-07T10:12:00Z,u4,/api/orders,200,2',
+      '2025-01-07T10:12:00Z,u5,/api/orders,200,2'],
+      // 2025-01-08 x orders (rounding check: 1.5 -> 2)
+      ['2025-01-08T10:12:00Z,u3,/api/orders,200,1',
+      '2025-01-08T10:12:00Z,u4,/api/orders,200,2',],
     ];
     const out: Output = input.flatMap((i) => aggregate(i, options));
     expect(out).toEqual([
@@ -224,6 +235,9 @@ describe('Q2 core', () => {
       { date: '2025-01-03', path: '/api/orders', count: 3, avgLatency: 140 },
       { date: '2025-01-04', path: '/api/orders', count: 3, avgLatency: 160 },
       { date: '2025-01-05', path: '/api/orders', count: 1, avgLatency: 60  },
+      { date: '2025-01-06', path: '/api/orders', count: 3, avgLatency: 1  },
+      { date: '2025-01-07', path: '/api/orders', count: 3, avgLatency: 2  },
+      { date: '2025-01-08', path: '/api/orders', count: 2, avgLatency: 2  },
     ]);
   });
 
