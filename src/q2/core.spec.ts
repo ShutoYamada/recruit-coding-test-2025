@@ -280,4 +280,57 @@ describe('Q2 core', () => {
     });
   });
 
+
+  // 6. 出力順：date ASC, count DESC, path ASC の決定的順序
+  describe('output ordering', () => {
+    it('sorts by date ASC, count DESC, path ASC', () => {
+      const lines = [
+        // Jan 2
+        '2025-01-02T00:00:00Z,u1,/z,200,100',
+        '2025-01-02T01:00:00Z,u2,/a,200,100',
+        '2025-01-02T02:00:00Z,u3,/a,200,100', // /a: count=2
+        // Jan 1
+        '2025-01-01T00:00:00Z,u4,/b,200,100',
+        '2025-01-01T01:00:00Z,u5,/b,200,100',
+        '2025-01-01T02:00:00Z,u6,/b,200,100', // /b: count=3
+        '2025-01-01T03:00:00Z,u7,/a,200,100', // /a: count=1
+      ];
+      const result = aggregate(lines, {
+        from: '2025-01-01',
+        to: '2025-01-02',
+        tz: 'jst',
+        top: 10,
+      });
+
+      // Expected order:
+      // 2025-01-01, /b, count=3
+      // 2025-01-01, /a, count=1
+      // 2025-01-02, /a, count=2
+      // 2025-01-02, /z, count=1
+      expect(result[0]).toMatchObject({ date: '2025-01-01', path: '/b', count: 3 });
+      expect(result[1]).toMatchObject({ date: '2025-01-01', path: '/a', count: 1 });
+      expect(result[2]).toMatchObject({ date: '2025-01-02', path: '/a', count: 2 });
+      expect(result[3]).toMatchObject({ date: '2025-01-02', path: '/z', count: 1 });
+    });
+
+    it('maintains stable sort with multiple same-count paths', () => {
+      const lines = [
+        '2025-01-01T00:00:00Z,u1,/c,200,100',
+        '2025-01-01T01:00:00Z,u2,/a,200,100',
+        '2025-01-01T02:00:00Z,u3,/b,200,100',
+      ];
+      const result = aggregate(lines, {
+        from: '2025-01-01',
+        to: '2025-01-01',
+        tz: 'jst',
+        top: 10,
+      });
+
+      // All have count=1, should be sorted by path
+      expect(result[0].path).toBe('/a');
+      expect(result[1].path).toBe('/b');
+      expect(result[2].path).toBe('/c');
+    });
+  });
+
 });
