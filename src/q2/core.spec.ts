@@ -144,4 +144,66 @@ describe('Q2 core', () => {
       expect(jan02?.count).toBe(2);
     });
   });
+
+  // 4. 集計：date×path の件数・平均が合う
+  describe('aggregation', () => {
+    it('calculates count and average latency correctly', () => {
+      const lines = [
+        '2025-01-01T00:00:00Z,u1,/api/orders,200,100',
+        '2025-01-01T01:00:00Z,u2,/api/orders,200,200',
+        '2025-01-01T02:00:00Z,u3,/api/orders,200,150',
+        '2025-01-01T03:00:00Z,u4,/api/users,200,300',
+      ];
+      const result = aggregate(lines, {
+        from: '2025-01-01',
+        to: '2025-01-01',
+        tz: 'jst',
+        top: 10,
+      });
+
+      const orders = result.find(r => r.path === '/api/orders');
+      const users = result.find(r => r.path === '/api/users');
+
+      expect(orders?.count).toBe(3);
+      expect(orders?.avgLatency).toBe(150); // (100+200+150)/3 = 150
+      expect(users?.count).toBe(1);
+      expect(users?.avgLatency).toBe(300);
+    });
+
+    it('rounds average latency correctly', () => {
+      const lines = [
+        '2025-01-01T00:00:00Z,u1,/a,200,100',
+        '2025-01-01T01:00:00Z,u2,/a,200,101',
+        '2025-01-01T02:00:00Z,u3,/a,200,102',
+      ];
+      const result = aggregate(lines, {
+        from: '2025-01-01',
+        to: '2025-01-01',
+        tz: 'jst',
+        top: 10,
+      });
+
+      // (100+101+102)/3 = 303/3 = 101
+      expect(result[0].avgLatency).toBe(101);
+    });
+
+    it('aggregates separately by date and path', () => {
+      const lines = [
+        '2025-01-01T10:00:00Z,u1,/a,200,100',
+        '2025-01-01T11:00:00Z,u2,/b,200,200',
+        '2025-01-02T10:00:00Z,u3,/a,200,150',
+        '2025-01-02T11:00:00Z,u4,/b,200,250',
+      ];
+      const result = aggregate(lines, {
+        from: '2025-01-01',
+        to: '2025-01-02',
+        tz: 'jst',
+        top: 10,
+      });
+
+      expect(result.length).toBe(4); // 2 dates × 2 paths
+      expect(result.find(r => r.date === '2025-01-01' && r.path === '/a')?.count).toBe(1);
+      expect(result.find(r => r.date === '2025-01-02' && r.path === '/a')?.count).toBe(1);
+    });
+  });
 });
