@@ -59,7 +59,7 @@ export const parseLines = (lines: string[]): Row[] => {
   }
   return out;
 };
-const filterByDate = (rows: Row[], from: string, to: string): Row[] => {
+export const filterByDate = (rows: Row[], from: string, to: string): Row[] => {
   const fromT = Date.parse(from + 'T00:00:00Z');
   const toT = Date.parse(to + 'T23:59:59Z');
   return rows.filter((r) => {
