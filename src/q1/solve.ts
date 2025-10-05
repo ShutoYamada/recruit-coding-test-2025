@@ -125,6 +125,12 @@ const parseLine = (line: string): Ticket | null => {
   const row = seat[1].toUpperCase();
   const col = parseInt(seat[2], 10);
 
+  // 範囲チェック（parse後すぐにチェック）
+  if (startHH > 23) return null;
+  if (startMM > 59) return null;
+  if (durM > 59) return null;
+  if (col < 1 || col > 24) return null;
+
   return {
     age: ageRaw as Age,
     rating: ratingRaw as Rating,
