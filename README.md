@@ -55,6 +55,18 @@ repo/
 
 - `pnpm test` で公開テストが実行されます（初期は一部 `it.skip`）。
 
+## 提出方法
+- q1, q2がすべて完了したら以下の手順に従ってPullRequestを作成してください
+
+1. "Contributes"をクリック
+![step_1](https://github.com/ShutoYamada/recruit-coding-test-2025/blob/main/docs/finished_step_1.png)
+
+2. "Open Pull Request"をクリック
+![step_2](https://github.com/ShutoYamada/recruit-coding-test-2025/blob/main/docs/finished_step_2.png)
+
+3. "coding exam finished <Your SCP ID>"とタイトルに入力して、"Create Pull Request"をクリック
+![step_3](https://github.com/ShutoYamada/recruit-coding-test-2025/blob/main/docs/finished_step_3.png)
+
 ## 連絡先
 
 コーディングテストに関して不明点があったら、以下に連絡をしてください。
