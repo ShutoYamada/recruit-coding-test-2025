@@ -43,6 +43,18 @@ temp
 .env.*
 !.env.example
 
+# Test files (not needed in production image)
+**/*.test.ts
+**/*.spec.ts
+**/__tests__
+**/__mocks__
+
+# Documentation (not needed in Docker)
+README.md
+*.md
+!package.json
+docs
+LICENSE
 
 # Misc
 *.local
