@@ -206,4 +206,78 @@ describe('Q2 core', () => {
       expect(result.find(r => r.date === '2025-01-02' && r.path === '/a')?.count).toBe(1);
     });
   });
+
+  // 5. 上位N：日付ごとに count 降順、同数は path 昇順
+  describe('top N ranking per date', () => {
+    it('selects top N per date by count descending', () => {
+      const lines = [
+        // 2025-01-01: /a(5), /b(3), /c(2), /d(1)
+        ...Array(5).fill(0).map((_, i) => `2025-01-01T0${i}:00:00Z,u${i},/a,200,100`),
+        ...Array(3).fill(0).map((_, i) => `2025-01-01T0${i+5}:00:00Z,u${i+5},/b,200,100`),
+        ...Array(2).fill(0).map((_, i) => `2025-01-01T0${i+8}:00:00Z,u${i+8},/c,200,100`),
+        '2025-01-01T10:00:00Z,u10,/d,200,100',
+      ];
+      const result = aggregate(lines, {
+        from: '2025-01-01',
+        to: '2025-01-01',
+        tz: 'jst',
+        top: 2,
+      });
+
+      expect(result.length).toBe(2); // only top 2
+      expect(result[0].path).toBe('/a'); // highest count (5)
+      expect(result[1].path).toBe('/b'); // second highest (3)
+    });
+
+    it('breaks ties by path ascending', () => {
+      const lines = [
+        '2025-01-01T00:00:00Z,u1,/z,200,100',
+        '2025-01-01T01:00:00Z,u2,/z,200,100', // /z: count=2
+        '2025-01-01T02:00:00Z,u3,/a,200,100',
+        '2025-01-01T03:00:00Z,u4,/a,200,100', // /a: count=2
+        '2025-01-01T04:00:00Z,u5,/m,200,100',
+        '2025-01-01T05:00:00Z,u6,/m,200,100', // /m: count=2
+      ];
+      const result = aggregate(lines, {
+        from: '2025-01-01',
+        to: '2025-01-01',
+        tz: 'jst',
+        top: 2,
+      });
+
+      expect(result.length).toBe(2);
+      expect(result[0].path).toBe('/a'); // alphabetically first
+      expect(result[1].path).toBe('/m'); // alphabetically second
+    });
+
+    it('applies top N independently per date', () => {
+      const lines = [
+        // Jan 1: /a(3), /b(2), /c(1)
+        ...Array(3).fill(0).map((_, i) => `2025-01-01T0${i}:00:00Z,u${i},/a,200,100`),
+        ...Array(2).fill(0).map((_, i) => `2025-01-01T0${i+3}:00:00Z,u${i+3},/b,200,100`),
+        '2025-01-01T05:00:00Z,u5,/c,200,100',
+        // Jan 2: /x(4), /y(2), /z(1)
+        ...Array(4).fill(0).map((_, i) => `2025-01-02T0${i}:00:00Z,u${i+10},/x,200,100`),
+        ...Array(2).fill(0).map((_, i) => `2025-01-02T0${i+4}:00:00Z,u${i+14},/y,200,100`),
+        '2025-01-02T06:00:00Z,u16,/z,200,100',
+      ];
+      const result = aggregate(lines, {
+        from: '2025-01-01',
+        to: '2025-01-02',
+        tz: 'jst',
+        top: 2,
+      });
+
+      expect(result.length).toBe(4); // 2 per date
+
+      const jan01 = result.filter(r => r.date === '2025-01-01');
+      expect(jan01.length).toBe(2);
+      expect(jan01.map(r => r.path).sort()).toEqual(['/a', '/b']);
+
+      const jan02 = result.filter(r => r.date === '2025-01-02');
+      expect(jan02.length).toBe(2);
+      expect(jan02.map(r => r.path).sort()).toEqual(['/x', '/y']);
+    });
+  });
+
 });
