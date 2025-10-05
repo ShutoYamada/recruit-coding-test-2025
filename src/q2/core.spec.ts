@@ -369,4 +369,148 @@ describe('Q2 core', () => {
     });
   });
 
+  // ========================================
+  // 7. Integration & Performance Tests - 総合テスト
+  // ========================================
+  describe('Integration tests (総合)', () => {
+    it('should handle sample scenario and compute avg correctly', () => {
+    const lines = [
+      '2025-01-03T10:12:00Z,u42,/api/orders,200,123',
+      '2025-01-03T10:15:00Z,u43,/api/orders,200,145',
+      '2025-01-03T10:20:00Z,u44,/api/users,404,50',
+      '2025-01-03T14:00:00Z,u45,/api/products,200,200',
+      '2025-01-03T15:30:00Z,u46,/api/orders,200,130', // -> JST: 2025-01-04 00:30
+    ];
+    const opt: Options = { from: '2025-01-01', to: '2025-01-31', tz: 'jst', top: 3 };
+    const result = aggregate(lines, opt);
+
+    // Check orders on 2025-01-03 (only 2 entries remain in JST)
+    const ordersDay1 = result.find(r => r.path === '/api/orders' && r.date === '2025-01-03');
+    expect(ordersDay1).toBeTruthy();
+    expect(ordersDay1?.count).toBe(2);
+    expect(ordersDay1?.avgLatency).toBe(Math.round((123 + 145) / 2)); // -> 134
+
+    // Check orders moved to 2025-01-04
+    const ordersDay2 = result.find(r => r.path === '/api/orders' && r.date === '2025-01-04');
+    expect(ordersDay2).toBeTruthy();
+    expect(ordersDay2?.count).toBe(1);
+    expect(ordersDay2?.avgLatency).toBe(130);
+    });
+
+    it('should handle large dataset and ensure top N per date <= top', () => {
+      const lines: string[] = [];
+      const paths = ['/a', '/b', '/c', '/d', '/e'];
+
+      // generate 1000 lines spread across January
+      for (let i = 0; i < 1000; i++) {
+        const day = (i % 30) + 1;
+        const date = new Date(Date.UTC(2025, 0, day, 0, 0, 0)); // UTC date for stability
+        const path = paths[i % paths.length];
+        const latency = (i % 500) + 1;
+        lines.push(`${date.toISOString()},u${i},${path},200,${latency}`);
+      }
+
+      const opt: Options = { from: '2025-01-01', to: '2025-01-31', tz: 'jst', top: 3 };
+      const result = aggregate(lines, opt);
+
+      // verify that for every date in result, entries count <= top
+      const byDate = new Map<string, number>();
+      for (const r of result) {
+        byDate.set(r.date, (byDate.get(r.date) || 0) + 1);
+      }
+      for (const cnt of byDate.values()) {
+        expect(cnt).toBeLessThanOrEqual(3);
+      }
+    });
+
+    it('should return empty when no data in range', () => {
+      const lines = [
+        '2024-12-31T00:00:00Z,u1,/a,200,100',
+        '2025-02-01T00:00:00Z,u1,/b,200,100',
+      ];
+      const opt: Options = { from: '2025-01-01', to: '2025-01-31', tz: 'jst', top: 10 };
+      const result = aggregate(lines, opt);
+
+      expect(result).toHaveLength(0);
+    });
+
+    it('should handle mixed valid and invalid lines', () => {
+      const lines = [
+        '2025-01-01T00:00:00Z,u1,/a,200,100',
+        'invalid,line',
+        '2025-01-01T01:00:00Z,u2,/a,200,200',
+        'another,bad,line',
+        '2025-01-01T02:00:00Z,u3,/b,200,300',
+      ];
+      const opt: Options = { from: '2025-01-01', to: '2025-01-01', tz: 'jst', top: 10 };
+      const result = aggregate(lines, opt);
+
+      // expect two paths: /a and /b
+      expect(result.find(r => r.path === '/a')?.count).toBe(2);
+      expect(result.find(r => r.path === '/b')?.count).toBe(1);
+    });
+  });
+
+  // ========================================
+  // 8. Edge Cases - エッジケース
+  // ========================================
+  describe('Edge cases (エッジケース)', () => {
+    it('should handle single data point', () => {
+      const lines = ['2025-01-01T00:00:00Z,u1,/a,200,100'];
+      const opt: Options = { from: '2025-01-01', to: '2025-01-01', tz: 'jst', top: 10 };
+      const result = aggregate(lines, opt);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].count).toBe(1);
+      expect(result[0].avgLatency).toBe(100);
+    });
+
+    it('should handle top=0 by returning empty', () => {
+      const lines = [
+        '2025-01-01T00:00:00Z,u1,/a,200,100',
+        '2025-01-01T01:00:00Z,u1,/b,200,100',
+      ];
+      const opt: Options = { from: '2025-01-01', to: '2025-01-01', tz: 'jst', top: 0 };
+      const result = aggregate(lines, opt);
+
+      expect(result).toHaveLength(0);
+    });
+
+    it('should handle identical timestamps for multiple requests', () => {
+      const lines = [
+        '2025-01-01T00:00:00Z,u1,/a,200,100',
+        '2025-01-01T00:00:00Z,u2,/a,200,200',
+        '2025-01-01T00:00:00Z,u3,/a,200,300',
+      ];
+      const opt: Options = { from: '2025-01-01', to: '2025-01-01', tz: 'jst', top: 10 };
+      const result = aggregate(lines, opt);
+
+      expect(result[0].count).toBe(3);
+      expect(result[0].avgLatency).toBe(200);
+    });
+
+    it('should handle very large latency values without numeric overflow', () => {
+      const lines = [
+        '2025-01-01T00:00:00Z,u1,/a,200,999999999',
+        '2025-01-01T01:00:00Z,u1,/a,200,1',
+      ];
+      const opt: Options = { from: '2025-01-01', to: '2025-01-01', tz: 'jst', top: 10 };
+      const result = aggregate(lines, opt);
+
+      expect(result[0].avgLatency).toBe(Math.round((999999999 + 1) / 2));
+    });
+
+    it('should handle paths with special characters', () => {
+      const lines = [
+        '2025-01-01T00:00:00Z,u1,/api/v1/users?id=123&sort=asc,200,100',
+        '2025-01-01T01:00:00Z,u1,/api/v1/users?id=123&sort=asc,200,200',
+      ];
+      const opt: Options = { from: '2025-01-01', to: '2025-01-01', tz: 'jst', top: 10 };
+      const result = aggregate(lines, opt);
+
+      expect(result[0].path).toBe('/api/v1/users?id=123&sort=asc');
+      expect(result[0].count).toBe(2);
+    });
+  });
+
 });
