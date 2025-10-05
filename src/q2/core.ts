@@ -43,6 +43,7 @@ export const parseLines = (lines: string[]): Row[] => {
 
     if(!isValidTimestamp(timestamp)) continue;
     if(!isValidUserId(userId)) continue;
+    if(!isValidLatency(latencyMs)) continue;
 
     out.push({
       timestamp: timestamp.trim(),
@@ -96,6 +97,18 @@ const filterByDate = (rows: Row[], from: string, to: string): Row[] => {
     return t >= fromT && t <= toT;
   });
 };
+
+function isValidLatency(s: string): boolean {
+  if (s.length === 0) return false;
+
+  for (let i = 0; i < s.length; i++) {
+    const code = s.charCodeAt(i);
+    if (code < 48 || code > 57) return false; // 0–9
+  }
+
+  const num = Number(s);
+  return Number.isInteger(num) && num >= 0;
+}
 
 const toTZDate = (utcIso: string, tz: TZ): string => {
   const t = new Date(utcIso);
