@@ -9,7 +9,7 @@ describe('Q1 solve', () => {
   // ------------------------------
   // [C1] ハッピーパス（基本価格の確認）
   // ------------------------------
-  it.skip('[C1] Adult/Young/Child の価格が正しく出る', () => {
+  it('[C1] Adult/Young/Child の価格が正しく出る', () => {
     const a = solve('Adult,G,10:00,1:00,A-1');
     const y = solve('Young,G,10:00,1:00,A-2');
     const c = solve('Child,G,10:00,1:00,I-3');
