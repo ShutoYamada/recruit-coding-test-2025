@@ -1,7 +1,7 @@
-type TZ = 'jst' | 'ict';
+/* eslint-disable @typescript-eslint/no-unused-vars */
 
 export type Row = {
-  timestamp: string; // ISO8601 UTC
+  timestamp: string;
   userId: string;
   path: string;
   status: number;
@@ -9,100 +9,114 @@ export type Row = {
 };
 
 export type Options = {
-  from: string; // YYYY-MM-DD (UTC 起点)
-  to: string; // YYYY-MM-DD (UTC 起点)
-  tz: TZ;
+  from: string;
+  to: string;
+  tz: 'jst' | 'ict';
   top: number;
 };
 
-export type Output = Array<{
-  date: string; // tz での YYYY-MM-DD
+export type OutputItem = {
+  date: string;
   path: string;
   count: number;
   avgLatency: number;
-}>;
+};
 
+export type Output = OutputItem[];
+
+// =============================
+// 1. CSV行をパース
+// =============================
+export const parseLines = (lines: string[]): Row[] => {
+  const rows: Row[] = [];
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    if (trimmed.startsWith('timestamp')) continue;
+
+    const cols = trimmed.split(',').map((s) => s.trim());
+    if (cols.length < 5) continue;
+
+    const [timestamp, userId, path, statusStr, latencyStr] = cols;
+    const status = Number(statusStr);
+    const latencyMs = Number(latencyStr);
+    if (!timestamp || !userId || !path) continue;
+    if (Number.isNaN(status) || Number.isNaN(latencyMs)) continue;
+
+    rows.push({ timestamp, userId, path, status, latencyMs });
+  }
+  return rows;
+};
+
+// =============================
+// 2. タイムゾーン変換
+// =============================
+const convertToLocalDate = (utcIso: string, tz: 'jst' | 'ict'): string => {
+  const date = new Date(utcIso);
+  const offsetHours = tz === 'jst' ? 9 : 7;
+  const local = new Date(date.getTime() + offsetHours * 60 * 60 * 1000);
+  return local.toISOString().slice(0, 10);
+};
+
+// =============================
+// 3. 集計ロジック本体
+// =============================
 export const aggregate = (lines: string[], opt: Options): Output => {
   const rows = parseLines(lines);
-  const filtered = filterByDate(rows, opt.from, opt.to);
-  const grouped = groupByDatePath(filtered, opt.tz);
-  const ranked = rankTop(grouped, opt.top);
-  return ranked;
-};
+  const fromTime = Date.parse(opt.from + 'T00:00:00Z');
+  const toTime = Date.parse(opt.to + 'T23:59:59Z');
 
-export const parseLines = (lines: string[]): Row[] => {
-  const out: Row[] = [];
-  for (const line of lines) {
-    const [timestamp, userId, path, status, latencyMs] = line.split(',');
-    if (!timestamp || !userId || !path || !status || !latencyMs) continue; // 壊れ行はスキップ
-    out.push({
-      timestamp: timestamp.trim(),
-      userId: userId.trim(),
-      path: path.trim(),
-      status: Number(status),
-      latencyMs: Number(latencyMs),
-    });
-  }
-  return out;
-};
-
-const filterByDate = (rows: Row[], from: string, to: string): Row[] => {
-  const fromT = Date.parse(from + 'T00:00:00Z');
-  const toT = Date.parse(to + 'T23:59:59Z');
-  return rows.filter((r) => {
+  // --- 日付範囲フィルタリング (UTC基準)
+  const filtered = rows.filter((r) => {
     const t = Date.parse(r.timestamp);
-    return t >= fromT && t <= toT;
+    return t >= fromTime && t <= toTime;
   });
-};
 
-const toTZDate = (utcIso: string, tz: TZ): string => {
-  const t = new Date(utcIso);
-  const offsetHours = tz === 'jst' ? 9 : 7; // JST=UTC+9, ICT=UTC+7
-  const local = new Date(t.getTime() + offsetHours * 60 * 60 * 1000);
-  const y = local.getUTCFullYear();
-  const m = (local.getUTCMonth() + 1).toString().padStart(2, '0');
-  const d = local.getUTCDate().toString().padStart(2, '0');
-  return `${y}-${m}-${d}`;
-};
+  // --- ローカル日付変換してグルーピング
+  const grouped = new Map<string, { count: number; totalLatency: number }>();
 
-const groupByDatePath = (rows: Row[], tz: TZ) => {
-  const map = new Map<string, { sum: number; cnt: number }>();
-  for (const r of rows) {
-    const date = toTZDate(r.timestamp, tz);
-    const key = `${date}\u0000${r.path}`;
-    const cur = map.get(key) || { sum: 0, cnt: 0 };
-    cur.sum += r.latencyMs;
-    cur.cnt += 1;
-    map.set(key, cur);
+  for (const r of filtered) {
+    const date = convertToLocalDate(r.timestamp, opt.tz);
+    const key = `${date}#${r.path}`;
+    const prev = grouped.get(key);
+    if (prev) {
+      prev.count++;
+      prev.totalLatency += r.latencyMs;
+    } else {
+      grouped.set(key, { count: 1, totalLatency: r.latencyMs });
+    }
   }
-  return Array.from(map.entries()).map(([k, v]) => {
-    const [date, path] = k.split('\u0000');
-    return { date, path, count: v.cnt, avgLatency: Math.round(v.sum / v.cnt) };
+
+  // --- 集計結果リスト化
+  const results: OutputItem[] = Array.from(grouped.entries()).map(([key, val]) => {
+    const [date, path] = key.split('#');
+    const avgLatency = Math.round(val.totalLatency / val.count);
+    return { date, path, count: val.count, avgLatency };
   });
-};
 
-const rankTop = (
-  items: { date: string; path: string; count: number; avgLatency: number }[],
-  top: number
-) => {
-  // 日付ごとに件数順で上位N
-  const byDate = new Map<string, typeof items>();
-  for (const it of items) {
-    const arr = byDate.get(it.date) || [];
-    arr.push(it);
-    byDate.set(it.date, arr);
+  // --- 日ごとに Top N 選定
+  const byDate = new Map<string, OutputItem[]>();
+  for (const r of results) {
+    const arr = byDate.get(r.date) ?? [];
+    arr.push(r);
+    byDate.set(r.date, arr);
   }
-  const out: typeof items = [];
-  for (const [, arr] of byDate) {
-    arr.sort((a, b) => b.count - a.count || a.path.localeCompare(b.path));
-    out.push(...arr.slice(0, top));
+
+  const final: OutputItem[] = [];
+  for (const [date, items] of Array.from(byDate.entries())) {
+    items.sort((a, b) => {
+      if (b.count !== a.count) return b.count - a.count;
+      return a.path.localeCompare(b.path);
+    });
+    final.push(...items.slice(0, opt.top));
   }
-  // 安定した出力順: date ASC, count DESC
-  out.sort(
-    (a, b) =>
-      a.date.localeCompare(b.date) ||
-      b.count - a.count ||
-      a.path.localeCompare(b.path)
-  );
-  return out;
+
+  // --- 最終ソート（日付昇順→count降順→path昇順）
+  final.sort((a, b) => {
+    if (a.date !== b.date) return a.date.localeCompare(b.date);
+    if (b.count !== a.count) return b.count - a.count;
+    return a.path.localeCompare(b.path);
+  });
+
+  return final;
 };
