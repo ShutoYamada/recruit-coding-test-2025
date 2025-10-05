@@ -148,7 +148,23 @@ const checkRating = (
   rating: Rating,
   hasAdultInSet: boolean
 ): boolean => {
-  // TODO ここを実装
+  // G rating: すべての年齢で視聴可能
+  if (rating === 'G') return true;
+
+  // R18+ rating: Adult のみ視聴可能
+  if (rating === 'R18+') {
+    return age === 'Adult';
+  }
+
+  // PG-12 rating: Child は Adult 同時購入が必要
+  if (rating === 'PG-12') {
+    if (age === 'Child') {
+      return hasAdultInSet;
+    }
+    // Adult と Young は PG-12 を視聴可能
+    return true;
+  }
+
   return true;
 };
 
