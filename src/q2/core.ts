@@ -33,18 +33,21 @@ export const aggregate = (lines: string[], opt: Options): Output => {
 export const parseLines = (lines: string[]): Row[] => {
   const out: Row[] = [];
   for (const line of lines) {
-    const [timestamp, userId, path, status, latencyMs] = line.split(',');
-    if (!timestamp || !userId || !path || !status || !latencyMs) continue; // 壊れ行はスキップ
-    out.push({
-      timestamp: timestamp.trim(),
-      userId: userId.trim(),
-      path: path.trim(),
-      status: Number(status),
-      latencyMs: Number(latencyMs),
-    });
+    const parts = line.split(',').map((s) => s.trim());
+    if (parts.length !== 5) continue; // カラム数不正はスキップ / Skip invalid column count
+
+    const [timestamp, userId, path, statusRaw, latencyRaw] = parts;
+    if (!timestamp || !userId || !path) continue; // 空フィールドスキップ / Skip empty fields
+
+    const status = Number(statusRaw);
+    const latencyMs = Number(latencyRaw);
+    if (isNaN(status) || isNaN(latencyMs)) continue; // 数値変換失敗をスキップ / Skip invalid number
+
+    out.push({ timestamp, userId, path, status, latencyMs });
   }
   return out;
 };
+
 
 const filterByDate = (rows: Row[], from: string, to: string): Row[] => {
   const fromT = Date.parse(from + 'T00:00:00Z');
