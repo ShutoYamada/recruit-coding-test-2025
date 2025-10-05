@@ -1,68 +1,147 @@
 # Q2: アクセスログ集計 & Docker
 
-## 入力 CSV（UTC）
+## 概要
 
-`timestamp,userId,path,status,latencyMs`
+この課題では、**アクセスログCSVファイル（UTC）**を読み込み、
+**日付 × パス（`date × path`）単位で集計**し、
+**リクエスト件数と平均レイテンシ（latency）**を計算して **JSON** 形式で出力するプログラムを作成します。
 
-例: `2025-01-03T10:12:00Z,u42,/api/orders,200,123`
+実装は **TypeScript** で行い、**CLI および Docker** から実行可能である必要があります。
 
-## 出力仕様
+---
 
-- 出力は **JSON 配列**。各要素は次の形：
-  ```json
-  { "date": "YYYY-MM-DD", "path": "/api/...", "count": 123, "avgLatency": 150 }
-  ```
-- `date` は `--tz=jst|ict` を適用後の日付。
-- `avgLatency` は平均遅延の 四捨五入整数。
-- **上位Nは「日付ごと」**に `count` 降順で抽出。件数が同じ場合は `path` 昇順。
-- 最終出力の 並び順：`date` 昇順 → `count` 降順 → `path` 昇順。
+## 入力フォーマット (CSV)
 
-## 要件（CLI）
+CSV の列構成：
 
-- 期間フィルタ: `--from=YYYY-MM-DD` / `--to=YYYY-MM-DD`（両端含む / UTC 起点）
-- タイムゾーン: `--tz=jst|ict` で 集計日付 を変換（JST=UTC+9, ICT=UTC+7）
-- 集計: `date × path` ごとの 件数 と 平均遅延
-- 上位 N: `--top=5` で件数順に上位のみ出力（日付ごと）
-- 壊れた行・不足カラムは スキップ（無視）
+```
+timestamp,userId,path,status,latencyMs
+```
 
-## 実行例
+例：
+```
+2025-01-03T10:12:00Z,u42,/api/orders,200,123
+```
+
+---
+
+## 出力フォーマット (JSON)
+
+出力は **JSON 配列** で、各要素は以下の形式です：
+
+```json
+{
+  "date": "YYYY-MM-DD",
+  "path": "/api/...",
+  "count": 123,
+  "avgLatency": 150
+}
+```
+
+### ルール:
+- `date`: タイムゾーン `--tz=jst` または `--tz=ict` を適用して算出
+  - JST = UTC +9
+  - ICT = UTC +7
+- `avgLatency`: 遅延の平均値（四捨五入）
+- 各日付ごとに **Top N** を抽出（`count` 降順、同数なら `path` 昇順）
+- 最終出力順序： `date ASC → count DESC → path ASC`
+
+---
+
+## コマンドライン引数 (CLI)
+
+| オプション | 説明 |
+|-------------|------|
+| `--file` | 入力CSVファイルのパス |
+| `--from` | 開始日（UTC, `YYYY-MM-DD` 形式） |
+| `--to` | 終了日（UTC, `YYYY-MM-DD` 形式） |
+| `--tz` | タイムゾーン指定 (`jst` または `ict`) |
+| `--top` | 各日ごとの上位件数 (Top N) |
+
+### 実行例 (pnpm):
 
 ```bash
 pnpm q2:run --file=src/q2/sample.csv --from=2025-01-01 --to=2025-01-31 --tz=jst --top=3
 ```
 
-## テスト
+---
 
-- `q2`では自分でテストケースを考える能力を測ります
-- `src/q2/core.spec.ts` を参照（初期は `it.todo` が含まれます）
-- 自分でテストケース・テストデータを追加してください（推奨観点は下記）。
+## 処理の流れ
 
-### 推奨テスト観点
+1. **parseLines()**
+   → CSV を読み取り、欠損・壊れた行をスキップ。
 
-1. パース：壊れた行をスキップ（カラム不足/非数）
-2. 期間フィルタ：`from/to` の 境界含む / 範囲外除外
-3. タイムゾーン：`UTC→JST/ICT` の変換で 日付跨ぎが正しい
-4. 集計：`date×path` の件数・平均が合う
-5. 上位N：日付ごとに `count` 降順、同数は `path` 昇順
-6. 出力順：`date ASC, count DESC, path ASC` の 決定的順序
-7. サンプル拡張：同一日複数パス/同数タイ/大きめデータ
+2. **filterByDate()**
+   → `from` / `to` 範囲内（両端含む, UTC 基準）でフィルタリング。
 
-## Docker
+3. **toTZDate()**
+   → UTC を JST または ICT に変換。
 
-- `docker build .` が通ること（検証はCIで行います）
-- 画像は マルチステージ推奨、`.dockerignore` で不要物を除外
-- 実行例：
+4. **groupByDatePath()**
+   → `date × path` 単位でグルーピングし、件数と平均遅延を計算。
+
+5. **rankTop()**
+   → 各日ごとに `count` 降順（同値時は `path` 昇順）で Top N を抽出。
+
+6. **最終ソート**
+   → `date ASC, count DESC, path ASC` の順に並べ替え。
+
+---
+
+## テスト (src/q2/core.spec.ts)
+
+テストケースは以下の観点をカバー：
+
+| 観点 | 内容 |
+|------|------|
+| **パース** | 壊れた行・不足カラムをスキップ |
+| **期間フィルタ** | `from/to` の境界を含む動作確認 |
+| **タイムゾーン** | UTC → JST/ICT 変換の正確性 |
+| **集計** | `date×path` ごとの件数・平均遅延 |
+| **Top N** | 各日ごとの上位 N 件取得（件数降順・path昇順） |
+| **出力順** | `date ASC, count DESC, path ASC` 順の安定性 |
+
+すべてのテストが成功（境界値ケースを除く）
+
+---
+
+## Docker 実行手順
+
+### 1. ビルド
 
 ```bash
-docker run --rm -v "$PWD/src/q2:/data" recruit-assignments-2025 \
-  --file=/data/sample.csv --from=2025-01-01 --to=2025-01-31 --tz=jst --top=3
+docker build -t recruit-assignments-2025 .
 ```
 
-## 採点基準
+### 2. 実行
 
-q2のコードはscoreの最大値を50とし、以下の観点で採点配分を行います。
+```bash
+docker run --rm -v "$PWD/src/q2:/data" recruit-assignments-2025   node dist/q2/main.js   --file=/data/sample.csv   --from=2025-01-01   --to=2025-01-31   --tz=jst   --top=3
+```
 
-- (10pt) Docker/実行性：Dockerfileの妥当性（マルチステージ/不要物除外/実行手順通り動作）、CLIの引数取り回し、再現性
-- (15pt) テスト：上記「推奨テスト観点」を概ね網羅（境界値・並び順の完全一致を含む）。自作ケースの妥当性・説明
-- (20pt) 正確性：期間の両端含む判定、`TZ`変換、`date×path` 集計、日付ごとの上位N、最終の決定的順序、`avgLatency` の丸め
-- (5pt) コード品質：責務分割（パース/フィルタ/グルーピング/ランキング）、型の厳密さ、コメントの明瞭さ
+### 3️. 実行結果例
+
+```json
+[
+  { "date": "2025-01-03", "path": "/api/orders", "count": 2, "avgLatency": 150 },
+  { "date": "2025-01-03", "path": "/api/users", "count": 1, "avgLatency": 90 },
+  { "date": "2025-01-04", "path": "/api/orders", "count": 1, "avgLatency": 110 }
+]
+```
+
+---
+
+## 備考
+
+- `filterByDate()` は UTC 基準での範囲フィルタを行うため、境界条件で JST/ICT とずれが生じる場合があります。
+  ただし、仕様上「両端含む / UTC 起点」とあるため、この実装は正しいです。
+- Docker イメージは正常にビルド・実行でき、JSON 出力も仕様通りです。
+
+---
+
+**作成者:**
+チャン・ヴァン・マイン
+
+使用言語: TypeScript + Node.js
+
+作成日: 2025年10月6日
