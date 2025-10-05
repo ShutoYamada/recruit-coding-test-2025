@@ -46,7 +46,7 @@ export const parseLines = (lines: string[]): Row[] => {
   return out;
 };
 
-const filterByDate = (rows: Row[], from: string, to: string): Row[] => {
+export const filterByDate = (rows: Row[], from: string, to: string): Row[] => {
   const fromT = Date.parse(from + 'T00:00:00Z');
   const toT = Date.parse(to + 'T23:59:59Z');
   return rows.filter((r) => {
@@ -55,7 +55,7 @@ const filterByDate = (rows: Row[], from: string, to: string): Row[] => {
   });
 };
 
-const toTZDate = (utcIso: string, tz: TZ): string => {
+export const toTZDate = (utcIso: string, tz: TZ): string => {
   const t = new Date(utcIso);
   const offsetHours = tz === 'jst' ? 9 : 7; // JST=UTC+9, ICT=UTC+7
   const local = new Date(t.getTime() + offsetHours * 60 * 60 * 1000);
@@ -65,7 +65,7 @@ const toTZDate = (utcIso: string, tz: TZ): string => {
   return `${y}-${m}-${d}`;
 };
 
-const groupByDatePath = (rows: Row[], tz: TZ) => {
+export const groupByDatePath = (rows: Row[], tz: TZ) => {
   const map = new Map<string, { sum: number; cnt: number }>();
   for (const r of rows) {
     const date = toTZDate(r.timestamp, tz);
@@ -81,7 +81,7 @@ const groupByDatePath = (rows: Row[], tz: TZ) => {
   });
 };
 
-const rankTop = (
+export const rankTop = (
   items: { date: string; path: string; count: number; avgLatency: number }[],
   top: number
 ) => {
