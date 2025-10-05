@@ -98,11 +98,11 @@ export const solve = (input: string): string => {
 };
 
 /**
- * 簡易パーサ（最小限の検証のみ）
- * TODO:
- *  - startHH/startMM/durH/durM の範囲チェック（例: 23:59, 分は 0-59）
- *  - 座席の列番号 1-24 の範囲チェック
- *  - その他フォーマットの揺れ（必要なら）
+ * 入力パーサ（完全な検証付き）
+ * 範囲チェック:
+ *  - startHH: 0-23, startMM: 0-59
+ *  - durH: >=0, durM: 0-59
+ *  - 座席: A-L行, 1-24列
  */
 const parseLine = (line: string): Ticket | null => {
   const parts = line.split(',').map((s) => s.trim());
@@ -110,9 +110,13 @@ const parseLine = (line: string): Ticket | null => {
 
   const [ageRaw, ratingRaw, startRaw, durRaw, seatRaw] = parts;
 
+  // 年齢区分チェック
   if (!['Adult', 'Young', 'Child'].includes(ageRaw)) return null;
+
+  // レーティングチェック
   if (!['G', 'PG-12', 'R18+'].includes(ratingRaw)) return null;
 
+  // 時刻フォーマットチェック
   const start = startRaw.match(/^(\d{1,2}):(\d{2})$/);
   const dur = durRaw.match(/^(\d{1,2}):(\d{2})$/);
   const seat = seatRaw.match(/^([A-L])-(\d{1,2})$/i);
@@ -124,6 +128,13 @@ const parseLine = (line: string): Ticket | null => {
   const durM = parseInt(dur[2], 10);
   const row = seat[1].toUpperCase();
   const col = parseInt(seat[2], 10);
+
+  // 範囲チェック
+  if (startHH < 0 || startHH > 23) return null;  // 時間は0-23
+  if (startMM < 0 || startMM > 59) return null;  // 分は0-59
+  if (durH < 0) return null;                     // 上映時間は0以上
+  if (durM < 0 || durM > 59) return null;        // 分は0-59
+  if (col < 1 || col > 24) return null;          // 列は1-24
 
   return {
     age: ageRaw as Age,
