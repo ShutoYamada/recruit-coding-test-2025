@@ -223,8 +223,26 @@ const checkTimeRule = (
  * 理由の順序を安定化（README: 「同伴 → 年齢 → 座席」）
  */
 const orderReasons = (reasons: string[]): string[] => {
-  // TODO ここを実装
-  return reasons;
+  // 優先順位定義：同伴必要 → 年齢制限 → 座席制限
+  const priority = [
+    MSG.NEED_ADULT,    // 対象の映画の入場には大人の同伴が必要です
+    MSG.AGE_LIMIT,     // 対象の映画は年齢制限により閲覧できません
+    MSG.SEAT_LIMIT,    // 対象のチケットではその座席をご利用いただけません
+  ] as const;
+
+  // 優先順位に従ってソート
+  return reasons.sort((a, b) => {
+    const indexA = priority.findIndex(msg => msg === a);
+    const indexB = priority.findIndex(msg => msg === b);
+
+    // 両方が優先順位リストにある場合
+    if (indexA !== -1 && indexB !== -1) {
+      return indexA - indexB;
+    }
+
+    // どちらかが優先順位リストにない場合は元の順序を保持
+    return 0;
+  });
 };
 
 // 重複排除（stable）
