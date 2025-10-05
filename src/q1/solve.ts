@@ -155,7 +155,14 @@ const checkRating = (
   rating: Rating,
   hasAdultInSet: boolean
 ): boolean => {
-  // TODO ここを実装
+  // ★ 年齢制限チェック：PG-12は子供のみ不可、R18+は大人のみ可
+  if (rating === 'G') return true; // anyone OK
+  if (rating === 'R18+') return age === 'Adult'; // only Adult OK
+
+  if (rating === 'PG-12') {
+    if (age === 'Child' && !hasAdultInSet) return false; // Child needs Adult
+    return true; // Young or Adult OK
+  }
   return true;
 };
 
