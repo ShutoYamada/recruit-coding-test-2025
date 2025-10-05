@@ -33,25 +33,43 @@ export const aggregate = (lines: string[], opt: Options): Output => {
 export const parseLines = (lines: string[]): Row[] => {
   const out: Row[] = [];
   for (const line of lines) {
-    const [timestamp, userId, path, status, latencyMs] = line.split(',');
-    if (!timestamp || !userId || !path || !status || !latencyMs) continue; // 壊れ行はスキップ
+    // Skip header line and empty lines
+    if (line.startsWith('timestamp,') || !line.trim()) continue;
+    
+    const parts = line.split(',');
+    if (parts.length !== 5) continue; // 壊れ行はスキップ（カラム数不正）
+    
+    const [timestamp, userId, path, status, latencyMs] = parts.map(s => s.trim());
+    
+    // Validate required fields
+    if (!timestamp || !userId || !path || !status || !latencyMs) continue;
+    
+    // Validate numeric fields
+    const statusNum = Number(status);
+    const latencyNum = Number(latencyMs);
+    if (isNaN(statusNum) || isNaN(latencyNum)) continue; // 非数値はスキップ
+    
+    // Validate timestamp format (basic ISO8601 check)
+    if (!timestamp.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/)) continue;
+    
     out.push({
-      timestamp: timestamp.trim(),
-      userId: userId.trim(),
-      path: path.trim(),
-      status: Number(status),
-      latencyMs: Number(latencyMs),
+      timestamp,
+      userId,
+      path,
+      status: statusNum,
+      latencyMs: latencyNum,
     });
   }
   return out;
 };
 
 const filterByDate = (rows: Row[], from: string, to: string): Row[] => {
+  // UTC範囲での両端含む判定
   const fromT = Date.parse(from + 'T00:00:00Z');
-  const toT = Date.parse(to + 'T23:59:59Z');
+  const toT = Date.parse(to + 'T23:59:59.999Z'); // End of day inclusive
   return rows.filter((r) => {
     const t = Date.parse(r.timestamp);
-    return t >= fromT && t <= toT;
+    return !isNaN(t) && t >= fromT && t <= toT; // NaN timestamp は除外
   });
 };
 
