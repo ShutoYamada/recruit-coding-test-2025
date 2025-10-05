@@ -217,7 +217,14 @@ const checkTimeRule = (
  */
 const orderReasons = (reasons: string[]): string[] => {
   // TODO ここを実装
-  return reasons;
+  const order = [
+    '対象の映画の入場には大人の同伴が必要です', // 同伴必要
+    '対象の映画は年齢制限により閲覧できません', // 年齢制限
+    '対象のチケットではその座席をご利用いただけません', // 座席制限
+  ];
+
+  // 理由の順序を安定化し、実際に存在する理由のみを取得します
+  return order.filter((msg) => reasons.includes(msg));
 };
 
 // 重複排除（stable）
