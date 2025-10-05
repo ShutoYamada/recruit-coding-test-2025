@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseLines, filterByDate, toTZDate } from './core.js';
+import { parseLines, filterByDate, toTZDate, groupByDatePath } from './core.js';
 
 describe('Q2 core', () => {
   // parseLines: skip invalid rows
@@ -57,6 +57,24 @@ describe('Q2 core', () => {
       '2025-01-01',
       '2025-01-02',
       '2025-01-02',
+    ]);
+  });
+
+  // groupByDatePath: group logs by (date, path)
+  // 日付とパスごとにグループ化して平均レイテンシを計算
+  it('groupByDatePath: groups by date and path with count and avgLatency', () => {
+    const input = [
+      '2025-01-01T15:00:00Z,u1,/a,200,100', 
+      '2025-01-01T16:00:00Z,u2,/a,200,300', 
+      '2025-01-02T14:59:59Z,u3,/b,200,200', 
+      '2025-01-02T15:00:00Z,u4,/a,200,400', 
+    ];
+    const rows = parseLines(input);
+    const grouped = groupByDatePath(rows, 'jst');
+    expect(grouped).toEqual([
+      { date: "2025-01-02", path: "/a", count: 2, avgLatency: 200 },
+      { date: "2025-01-02", path: "/b", count: 1, avgLatency: 200 },
+      { date: "2025-01-03", path: "/a", count: 1, avgLatency: 400 },
     ]);
   });
 
