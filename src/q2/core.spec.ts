@@ -216,6 +216,41 @@ describe('Q2 core - Aggregation Logic', () => {
     expect(date2Results[1].count).toBe(2);
   });
 
+});
+
+describe('Q2 core - Output Sorting', () => {
+  // 6. 出力順：date昇順→count降順→path昇順
+  it('aggregate: final output sorting by date asc, count desc, path asc', () => {
+    const csvLines = [
+      // Mixed dataでソート検証用
+      '2025-01-02T10:00:00Z,u1,/api/auth,200,100',     // 2025-01-02 /api/auth count=1
+      '2025-01-01T10:00:00Z,u2,/api/users,200,200',    // 2025-01-01 /api/users count=2
+      '2025-01-01T11:00:00Z,u3,/api/users,200,150',    // 2025-01-01 /api/users count=2
+      '2025-01-02T11:00:00Z,u4,/api/orders,200,300',   // 2025-01-02 /api/orders count=3
+      '2025-01-02T12:00:00Z,u5,/api/orders,200,250',   // 2025-01-02 /api/orders count=3
+      '2025-01-02T13:00:00Z,u6,/api/orders,200,400',   // 2025-01-02 /api/orders count=3
+      '2025-01-01T12:00:00Z,u7,/api/products,200,180', // 2025-01-01 /api/products count=1
+      '2025-01-02T14:00:00Z,u8,/api/users,200,220',    // 2025-01-02 /api/users count=1
+    ];
+
+    const result = aggregate(csvLines, {
+      from: '2025-01-01',
+      to: '2025-01-02',
+      tz: 'jst',
+      top: 10  // 全て取得
+    });
+
+    // 結果の検証: 5グループが期待される
+    expect(result.length).toBe(5);
+
+    // 最終出力順序の検証: date昇順 → count降順 → path昇順
+    expect(result[0]).toMatchObject({ date: '2025-01-01', path: '/api/users', count: 2 });      
+    expect(result[1]).toMatchObject({ date: '2025-01-01', path: '/api/products', count: 1 });   
+    expect(result[2]).toMatchObject({ date: '2025-01-02', path: '/api/orders', count: 3 });     
+    expect(result[3]).toMatchObject({ date: '2025-01-02', path: '/api/auth', count: 1 });       
+    expect(result[4]).toMatchObject({ date: '2025-01-02', path: '/api/users', count: 1 });      
+  });
+
   
   it.todo('aggregate basic');
 
