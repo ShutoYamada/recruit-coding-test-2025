@@ -315,4 +315,91 @@ describe('Q2 core', () => {
     ]);
   });
 
+  it('aggregate: The output order must be fixed as: date ASC, count DESC, path ASC', () => {
+    const options: Options = {
+      from: '2025-01-01',
+      to: '2025-01-31',
+      tz: 'jst',
+      top: 2
+    };
+
+    const input: string[][] = [
+      // 2025-01-03: (orders: 1), 2025-01-04: (orders: 1), 2025-01-05: (orders: 1)
+      [
+        '2025-01-05T10:12:00Z,u2,/api/orders,200,100',
+        '2025-01-03T10:12:00Z,u1,/api/orders,200,100',
+        '2025-01-04T10:12:00Z,u1,/api/orders,200,100',
+      ],
+      // 2025-01-03: (orders: 3), 2025-01-04: (orders: 1), 2025-01-05: (orders: 2)
+      [
+        '2025-01-05T10:12:00Z,u2,/api/orders,200,100',
+        '2025-01-05T10:12:00Z,u2,/api/orders,200,100',
+
+        '2025-01-03T10:12:00Z,u1,/api/orders,200,100',
+        '2025-01-03T10:12:00Z,u1,/api/orders,200,100',
+        '2025-01-03T10:12:00Z,u1,/api/orders,200,100',
+
+        '2025-01-04T10:12:00Z,u1,/api/orders,200,100',
+      ],
+      // 2025-01-03: (orders: 3, users: 1), 2025-01-04: (orders: 1, users: 2), 
+      // 2025-01-05: (orders: 2, users: 2), 2025-01-06: (orders: 2, users: 2)(change input order)
+      [
+        '2025-01-05T10:12:00Z,u2,/api/orders,200,100',
+        '2025-01-05T10:12:00Z,u2,/api/users,200,100',
+        '2025-01-05T10:12:00Z,u2,/api/orders,200,100',
+        '2025-01-05T10:12:00Z,u2,/api/users,200,100',
+
+        '2025-01-06T10:12:00Z,u2,/api/users,200,100',
+        '2025-01-06T10:12:00Z,u2,/api/orders,200,100',
+        '2025-01-06T10:12:00Z,u2,/api/users,200,100',
+        '2025-01-06T10:12:00Z,u2,/api/orders,200,100',
+
+        '2025-01-03T10:12:00Z,u1,/api/orders,200,100',
+        '2025-01-03T10:12:00Z,u1,/api/orders,200,100',
+        '2025-01-03T10:12:00Z,u1,/api/users,200,100',
+        '2025-01-03T10:12:00Z,u1,/api/orders,200,100',
+
+        '2025-01-04T10:12:00Z,u1,/api/orders,200,100',
+        '2025-01-04T10:12:00Z,u1,/api/users,200,100',
+        '2025-01-04T10:12:00Z,u1,/api/users,200,100',
+      ],
+    ];
+
+    const out = input.map((i) => 
+      aggregate(i, options)
+        .map((r) => ({
+          date: r.date, 
+          path: r.path, 
+          count: r.count
+          // no need to check avgLatency
+        }))
+    );
+
+    expect(out).toEqual([
+      [
+        { date: '2025-01-03', path: '/api/orders', count: 1 },
+        { date: '2025-01-04', path: '/api/orders', count: 1 },
+        { date: '2025-01-05', path: '/api/orders', count: 1 },
+      ],
+      [
+        { date: '2025-01-03', path: '/api/orders', count: 3 },
+        { date: '2025-01-04', path: '/api/orders', count: 1 },
+        { date: '2025-01-05', path: '/api/orders', count: 2 },
+      ],
+      [
+        { date: '2025-01-03', path: '/api/orders', count: 3 },
+        { date: '2025-01-03', path: '/api/users', count: 1 },
+
+        { date: '2025-01-04', path: '/api/users', count: 2 },
+        { date: '2025-01-04', path: '/api/orders', count: 1 },
+
+        { date: '2025-01-05', path: '/api/orders', count: 2 },
+        { date: '2025-01-05', path: '/api/users', count: 2 },
+
+        { date: '2025-01-06', path: '/api/orders', count: 2 },
+        { date: '2025-01-06', path: '/api/users', count: 2 },
+      ]  
+    ]);
+  });
+
 });
