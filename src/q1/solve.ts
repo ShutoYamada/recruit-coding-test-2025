@@ -23,17 +23,13 @@ const MSG = {
   SEAT_LIMIT: '対象のチケットではその座席をご利用いただけません',
 } as const;
 
+type MsgType = typeof MSG[keyof typeof MSG];
+
 /**
  * 仕様のポイント（READMEに準拠）:
  * - 各行ごとに OK なら価格、NG なら理由（カンマ区切り）。
  * - セット内に1枚でもNGがあれば「全体不可」→ 価格は出さず、NG行の理由だけを改行で出力。
  * - 理由の表示順は「同伴必要 → 年齢制限 → 座席制限」。
- *
- * ※ このファイルは “雛形” です。意図的に未実装/簡略化があります（TODO を参照）。
- *   - checkTimeRule / checkRating / checkSeat は要実装
- *   - 理由の並び替え（orderReasons）は要実装
- *   - parseLine のバリデーションは最小限（境界チェックなどを追加実装すること）
- *   - 「全体不可」時の価格抑制ロジックを実装すること
  */
 export const solve = (input: string): string => {
   const lines = input
@@ -41,29 +37,28 @@ export const solve = (input: string): string => {
     .map((s) => s.trim())
     .filter(Boolean);
 
-  // smoke 用：空入力は空出力（テスト配線確認）
   if (lines.length === 0) return '';
 
   // 入力をパース（不正なら即終了）
   const tickets: Ticket[] = [];
   for (const line of lines) {
     const t = parseLine(line);
-    if (!t) return '不正な入力です'; // TODO: 必要に応じて詳細化してもよい（仕様は1行固定でOK）
+    if (!t) return '不正な入力です';
     tickets.push(t);
   }
 
   // セット属性（同一上映前提）
   const hasAdult = tickets.some((t) => t.age === 'Adult');
-  const hasChild = tickets.some((t) => t.age === 'Child'); // C5 で使用（グループ規則）
+  const hasChild = tickets.some((t) => t.age === 'Child');
   const rating = tickets[0].rating;
-  const endMinutes = calcEndMinutes(tickets[0]); // 今年は日跨ぎなし前提
+  const endMinutes = calcEndMinutes(tickets[0]); // 日跨ぎなし前提
 
   // 各行の評価
   const evaluated: { ok: boolean; text: string }[] = [];
   let anyNg = false;
 
   for (const t of tickets) {
-    const reasons: string[] = [];
+    const reasons: MsgType[] = [];
 
     // 理由の push 順は README の順序に合わせておく（後で orderReasons で厳密化）
     if (!checkTimeRule(t, endMinutes, hasAdult, hasChild)) {
@@ -76,7 +71,7 @@ export const solve = (input: string): string => {
       reasons.push(MSG.SEAT_LIMIT);
     }
 
-    const ordered = orderReasons(reasons); // TODO: 並び替えを実装
+    const ordered = orderReasons(reasons);
 
     if (ordered.length === 0) {
       evaluated.push({ ok: true, text: `${PRICE[t.age]}円` });
@@ -86,17 +81,19 @@ export const solve = (input: string): string => {
     }
   }
 
-  // TODO 「全体不可」のときは価格を出さず、NG行の理由だけを出力する
+  // 「全体不可」のときは価格を出さず、NG行の理由だけを出力する
+  if (anyNg) {
+    return evaluated
+      .filter((e) => !e.ok)
+      .map((e) => e.text)
+      .join('\n');
+  }
 
   return evaluated.map((e) => e.text).join('\n');
 };
 
 /**
- * 簡易パーサ（最小限の検証のみ）
- * TODO:
- *  - startHH/startMM/durH/durM の範囲チェック（例: 23:59, 分は 0-59）
- *  - 座席の列番号 1-24 の範囲チェック
- *  - その他フォーマットの揺れ（必要なら）
+ * バリデーションチェック付きのパーサ
  */
 const parseLine = (line: string): Ticket | null => {
   const parts = line.split(',').map((s) => s.trim());
@@ -119,6 +116,11 @@ const parseLine = (line: string): Ticket | null => {
   const row = seat[1].toUpperCase();
   const col = parseInt(seat[2], 10);
 
+  // 値の範囲チェック
+  if (startHH < 0 || startHH > 23 || startMM < 0 || startMM > 59) return null;
+  if (durH < 0 || durM < 0 || durM > 59) return null;
+  if (col < 1 || col > 24) return null;
+
   return {
     age: ageRaw as Age,
     rating: ratingRaw as Rating,
@@ -139,34 +141,50 @@ const calcEndMinutes = (t: Ticket): number => {
 
 /**
  * 年齢/レーティングの規則
- *  - G: 誰でも可
- *  - PG-12: Child は Adult 同時購入がなければ不可
- *  - R18+: Adult 以外は不可
+ * - G: 誰でも可
+ * - PG-12: Child は Adult 同時購入がなければ不可
+ * - R18+: Adult 以外は不可
  */
 const checkRating = (
   age: Age,
   rating: Rating,
   hasAdultInSet: boolean
 ): boolean => {
-  // TODO ここを実装
+  switch (rating) {
+    case 'G':
+      return true;
+    case 'PG-12':
+      // Child で、セット内に Adult がいなければ不可
+      if (age === 'Child' && !hasAdultInSet) {
+        return false;
+      }
+      return true;
+    case 'R18+':
+      // Adult のみ可
+      return age === 'Adult';
+  }
   return true;
 };
 
 /**
  * 座席の規則
- *  - J〜L は Child 不可
+ * - J〜L は Child 不可
  */
 const checkSeat = (t: Ticket): boolean => {
-  // TODO ここを実装
+  if (t.age === 'Child') {
+    if (['J', 'K', 'L'].includes(t.row)) {
+      return false;
+    }
+  }
   return true;
 };
 
 /**
  * 時刻の規則（終了時刻ベース）
- *  - Adult がいれば常にOK
- *  - Adult が 0 かつ Child を含み、終了が 16:00 を超える → Young も含め全員 NG
- *  - Adult が 0 で Young 単独など、終了が 18:00 を超える Young は NG
- *  - ちょうど 16:00/18:00 は OK
+ * - Adult がいれば常にOK
+ * - Adult が 0 かつ Child を含み、終了が 16:00 を超える → Young も含め全員 NG
+ * - Adult が 0 で Young 単独など、終了が 18:00 を超える Young は NG
+ * - ちょうど 16:00/18:00 は OK
  */
 const checkTimeRule = (
   t: Ticket,
@@ -174,17 +192,37 @@ const checkTimeRule = (
   hasAdultInSet: boolean,
   hasChildInSet: boolean
 ): boolean => {
-  // TODO ここを実装
+  // セット内に Adult がいれば、時刻規則は常に OK
+  if (hasAdultInSet) {
+    return true;
+  }
+
+  // グループ規則：セット内に Child がいて終演が遅い場合、全員が不可
+  if (hasChildInSet && endMinutes > 16 * 60) {
+    return false;
+  }
+
+  // 個人規則（Adult がいない場合のみ適用）
+  if (t.age === 'Young' && endMinutes > 18 * 60) {
+    return false;
+  }
+  
+  // この条件は上記のグループ規則に含まれるが、明確化のため記述
+  if (t.age === 'Child' && endMinutes > 16 * 60) {
+    return false;
+  }
+
   return true;
 };
 
 /**
  * 理由の順序を安定化（README: 「同伴 → 年齢 → 座席」）
  */
-const orderReasons = (reasons: string[]): string[] => {
-  // TODO ここを実装
-  return reasons;
+const orderReasons = (reasons: MsgType[]): MsgType[] => {
+  const order: MsgType[] = [MSG.NEED_ADULT, MSG.AGE_LIMIT, MSG.SEAT_LIMIT];
+  return reasons.sort((a, b) => order.indexOf(a) - order.indexOf(b));
 };
+
 
 // 重複排除（stable）
 const uniqueStable = <T>(arr: T[]): T[] => {
