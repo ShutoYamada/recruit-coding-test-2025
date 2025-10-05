@@ -427,7 +427,7 @@ describe('Q2 core', () => {
     };
     const fromDate = '2025-03-01';
     const toDate = '2025-03-31';
-    const numOfRows = 1e5;
+    const numOfRows = 160000;
 
     const expectOutput = generateExpectOutput(options);
     const input = generateInputFromExpect(fromDate, toDate, numOfRows, expectOutput, options);
@@ -438,15 +438,19 @@ describe('Q2 core', () => {
 
 const ONE_DAY_MS = 1000 * 60 * 60 * 24;
 
-const MIN_COUNT_NORMAL = 5;
-const MAX_COUNT_NORMAL = 25;
+const MIN_COUNT_NORMAL = 50;
+const MAX_COUNT_NORMAL = 250;
 const MIN_COUNT_HOTDATE = 1000;
 const MAX_COUNT_HOTDATE = 2000;
 
 const MIN_LATENCY_NORMAL = 60;
 const MAX_LATENCY_NORMAL = 120;
+
 const MIN_LATENCY_HOTDATE = 120;
 const MAX_LATENCY_HOTDATE = 500;
+
+const MIN_LATENCY_NOISE = 80;
+const MAX_LATENCY_NOISE = 180;
 
 const P_HOT_DATE = 0.6;
 const MAX_USER = 10000;
@@ -465,7 +469,14 @@ const MAX_USER = 10000;
  */
 const generateExpectOutput = (options: Options): Output => {
   const expectOutput: Output = [];
-  for(const date of ForeachDay(options.from, options.to)) {
+  // Add one day to handle cases where converting from UTC to ICT/JST causes the date to shift forward by one day.
+  const [y, m, d] = options.to.split('-').map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d + 1));
+  const tzTo = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}
+  -${String(date.getUTCDate()).padStart(2, '0')}`;
+
+  console.log(date, tzTo);
+  for(const date of ForeachDay(options.from, tzTo)) {
     const pHotDate = Math.random();
     const usedPaths = new Set<string>();
     for (let i = 0; i < options.top; ++i) {
@@ -527,7 +538,11 @@ const generateExpectOutput = (options: Options): Output => {
 const generateInputFromExpect = (fromDate: string, toDate: string, 
   numOfRows: number, expectOutput: Output, options: Options): string[] => {
   const input: string[] = [];
-
+  
+  const coreTotal = expectOutput.reduce((acc, o) => acc + o.count, 0);
+  if (numOfRows < coreTotal) {
+    throw new Error(`numOfRows (${numOfRows}) < coreTotal (${coreTotal}).`);
+  }
   // Generate core lines based on expectOutput
   let uid = 1;
   for (const out of expectOutput) {
@@ -535,11 +550,29 @@ const generateInputFromExpect = (fromDate: string, toDate: string,
       let dt: string;
       do {
         dt = randomDateTime(out.date, options.tz);
-      } while (new Date(dt) < new Date(options.from + 'T00:00:00Z')); // Ensure it falls within the UTC range (from -> to)
+      } while (new Date(dt) < new Date(options.from + 'T00:00:00Z') || 
+        new Date(dt) > new Date(options.to + 'T23:59:59Z')); // Ensure it falls within the UTC range (from -> to)
 
       const userId = `u${uid++}`;
       if (uid > MAX_USER) uid = 1;
       input.push(`${dt},${userId},${out.path},200,${out.avgLatency}`); // Set latency = avgLatency -> ensure the output matches the expected result
+    }
+  }
+  // Generate noise lines
+  let remaining = numOfRows - coreTotal;
+  if (remaining === 0) return input;
+  while(remaining > 0) {
+    for(const date of ForeachDay(fromDate, toDate)) {
+      const dt = randomDateTime(date, options.tz);
+      
+      const userId = `u${uid++}`;
+      if (uid > MAX_USER) uid = 1;
+      
+      const path = `/api/${randomSuffix(4)}`;
+      const latency = MIN_LATENCY_NOISE + Math.random() * (MAX_LATENCY_NOISE - MIN_LATENCY_NOISE);
+      input.push(`${dt},${userId},${path},200,${latency}`);
+      --remaining;
+      if(remaining < 0) break;
     }
   }
   return input;
@@ -577,4 +610,3 @@ const randomDateTime = (date: string, tz: "jst" | "ict"): string => {
     .toISOString()
     .slice(0, 19) + 'Z';
 }
-
