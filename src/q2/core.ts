@@ -30,17 +30,38 @@ export const aggregate = (lines: string[], opt: Options): Output => {
   return ranked;
 };
 
+/**
+ * CSV行をパースしてRowオブジェクトに変換
+ * 不正なフォーマットや欠損データは自動的にスキップ
+ */
 export const parseLines = (lines: string[]): Row[] => {
   const out: Row[] = [];
   for (const line of lines) {
-    const [timestamp, userId, path, status, latencyMs] = line.split(',');
-    if (!timestamp || !userId || !path || !status || !latencyMs) continue; // 壊れ行はスキップ
+    const parts = line.split(',');
+    if (parts.length !== 5) continue; // 壊れ行はスキップ (カラム数不正)
+
+    const [timestamp, userId, path, statusStr, latencyStr] = parts.map((p) =>
+      p.trim()
+    );
+
+    // 必須フィールドの存在確認
+    if (!timestamp || !userId || !path || !statusStr || !latencyStr) continue;
+
+    // 数値フィールドの検証
+    const status = Number(statusStr);
+    const latencyMs = Number(latencyStr);
+    if (isNaN(status) || isNaN(latencyMs)) continue; // 非数値はスキップ
+
+    // timestamp の検証 (ISO8601 UTC format)
+    const timestampDate = new Date(timestamp);
+    if (isNaN(timestampDate.getTime())) continue; // 不正な日時はスキップ
+
     out.push({
-      timestamp: timestamp.trim(),
-      userId: userId.trim(),
-      path: path.trim(),
-      status: Number(status),
-      latencyMs: Number(latencyMs),
+      timestamp,
+      userId,
+      path,
+      status,
+      latencyMs,
     });
   }
   return out;
