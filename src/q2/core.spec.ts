@@ -1,4 +1,6 @@
 /* eslint-disable max-lines-per-function */
+/* eslint-disable @typescript-eslint/no-unused-vars */
+
 import { describe, expect, it } from 'vitest';
 import { parseLines, aggregate } from './core.js';
 import { Options, Output } from './core.js';
@@ -416,4 +418,72 @@ describe('Q2 core', () => {
     ]);
   });
 
+  it('aggregate: Sample expansion: multiple paths on the same day / duplicate numbers / large data', () => {
+    const options: Options = {
+      from: '2025-03-10',
+      to: '2025-03-20',
+      tz: 'ict',
+      top: 5
+    };
+    const fromDate = '2025-03-01';
+    const toDate = '2025-03-31';
+    const numOfRows = 1e5
+    ;
+    const expectOutput = generateExpectOutput(options);
+    const input = generateInputFromExpect(fromDate, toDate, numOfRows, expectOutput, options);
+    const out = aggregate(input, options);
+
+    expect(out).toEqual(expectOutput);     
+  });
 });
+
+/**
+ * この関数はテスト用のサンプルデータ「expectOutput」を生成するための関数です。
+ * データ生成ルール：
+ * - `date` は `options` の `from` と `to` から取得されます。
+ * - 各日ごとに生成される path の数は options.top です。
+ * - 各日には 0.6 の確率でアクセスが多い日（ホットデー）となります。
+ * - アクセスが多い日は `count` と `avgLatency` が通常より高くなります。
+ * - 生成後、データは以下の順序でソートされます：
+ *     `date` 昇順、`count` 降順、`path` 昇順
+ * @param options   
+ * @returns         `Output` 型の配列。各要素は `{ date, path, count, avgLatency }` を持ちます。
+ */
+const generateExpectOutput = (options: Options): Output => {
+  const expectOutput: Output = [];
+
+  return expectOutput;
+};  
+
+/**
+ * この関数はテスト用の入力データ（CSV）を生成するためのものです。
+ *
+ * データ生成ルール：
+ * - `expectOutput` に含まれるコアレコード（core）を保持します。  
+ *   各要素 `{ date, path, count, avgLatency }` に対して、
+ *   対応する日付（`options.tz` のローカル日付）内でランダムな `timestamp` を持つ
+ *   `count` 行のCSVデータを生成し、`latencyMs` は平均が `avgLatency` になるように設定します。
+ *
+ * - 合計行数を `numOfRows` に一致させるため、追加の **ノイズデータ (noise)** を生成します：
+ *   - ノイズデータは `fromDate` ～ `toDate` の範囲内（`options.tz` 基準）で作成されます。
+ *   - `path` ノイズは末尾に4文字のサフィックス（例：`/api/abcd`）を付けて
+ *     `expectOutput`（通常3文字サフィックス）と区別します。
+ *   - 各ノイズパスの `count` は小さい値（5～25）に設定し、
+ *     日ごとの上位（top=5）に影響しないようにします。
+ *   - `latencyMs` ノイズはランダム（例：80～180）にして、
+ *     より現実的なデータ分布を模擬します。
+ *
+ * @param fromDate  データ生成の開始日（`YYYY-MM-DD`、`options.tz` のローカル日付）
+ * @param toDate    データ生成の終了日（`YYYY-MM-DD`、`options.tz` のローカル日付）
+ * @param numOfRows 生成するCSV行数の合計。`expectOutput` の全count合計以上である必要があります。
+ * @param expectOutput  `generateExpectOutput()` により生成された基準データ。
+ * @param options   
+ * @returns         生成されたCSV文字列の配列。
+ */
+const generateInputFromExpect = (fromDate: string, toDate: string, 
+  numOfRows: number, expectOutput: Output, options: Options): string[] => {
+  const input: string[] = [];
+
+  return input;
+};
+
