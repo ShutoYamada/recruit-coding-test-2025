@@ -172,7 +172,9 @@ const checkRating = (
  */
 const checkSeat = (t: Ticket): boolean => {
   // TODO ここを実装
-  return true;
+  // ★ 座席制限チェック：子供はJ〜L列を利用不可
+  if (t.age !== 'Child') return true;
+  return !(t.row === 'J' || t.row === 'K' || t.row === 'L');
 };
 
 /**
