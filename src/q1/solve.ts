@@ -209,7 +209,17 @@ const checkTimeRule = (
  */
 const orderReasons = (reasons: string[]): string[] => {
   // TODO ここを実装
-  return reasons;
+  // ★ 理由の優先順位付け：「同伴必要」→「年齢制限」→「座席制限」
+  const pri = new Map<string, number>([
+    [MSG.NEED_ADULT, 1],
+    [MSG.AGE_LIMIT, 2],
+    [MSG.SEAT_LIMIT, 3],
+  ]);
+  return [...reasons].sort((a, b) => {
+    const pa = pri.get(a) ?? 99;
+    const pb = pri.get(b) ?? 99;
+    return pa - pb || a.localeCompare(b);
+  });
 };
 
 // 重複排除（stable）
