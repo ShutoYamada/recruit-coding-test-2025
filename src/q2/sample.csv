@@ -1,5 +1,0 @@
-timestamp,userId,path,status,latencyMs
-2025-01-03T10:12:00Z,u1,/api/orders,200,120
-2025-01-03T10:13:00Z,u2,/api/orders,200,180
-2025-01-03T11:00:00Z,u3,/api/users,200,90
-2025-01-04T00:10:00Z,u1,/api/orders,200,110
