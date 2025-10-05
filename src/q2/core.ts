@@ -65,11 +65,19 @@ export const parseLines = (lines: string[]): Row[] => {
   return out;
 };
 
+/**
+ * 期間フィルタ: from/to の両端を含む (UTC基準)
+ * from: YYYY-MM-DD 00:00:00 UTC 以降
+ * to: YYYY-MM-DD 23:59:59.999 UTC 以前
+ */
 const filterByDate = (rows: Row[], from: string, to: string): Row[] => {
   const fromT = Date.parse(from + 'T00:00:00Z');
-  const toT = Date.parse(to + 'T23:59:59Z');
+  const toT = Date.parse(to + 'T23:59:59.999Z');
+
   return rows.filter((r) => {
     const t = Date.parse(r.timestamp);
+    // 無効なタイムスタンプはスキップ
+    if (isNaN(t)) return false;
     return t >= fromT && t <= toT;
   });
 };
