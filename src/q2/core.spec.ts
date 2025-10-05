@@ -333,4 +333,91 @@ describe('Q2 core', () => {
     });
   });
 
+  // 7. 総合テスト：サンプル拡張
+  describe('comprehensive integration tests', () => {
+    it('handles large dataset with multiple dates and paths', () => {
+      const lines: string[] = [];
+      const paths = ['/api/orders', '/api/users', '/api/products', '/api/cart', '/api/checkout'];
+
+      // Generate 100 requests across 3 days
+      for (let day = 1; day <= 3; day++) {
+        for (let i = 0; i < 20; i++) {
+          const path = paths[i % paths.length];
+          const hour = (i % 24).toString().padStart(2, '0');
+          lines.push(`2025-01-0${day}T${hour}:00:00Z,u${i},${path},200,${100 + i * 10}`);
+        }
+      }
+
+      const result = aggregate(lines, {
+        from: '2025-01-01',
+        to: '2025-01-03',
+        tz: 'jst',
+        top: 3,
+      });
+
+      // Should have 3 dates × 3 top paths = 9 results
+      expect(result.length).toBe(9);
+
+      // Verify each date has exactly 3 entries
+      for (let day = 1; day <= 3; day++) {
+        const dayResults = result.filter(r => r.date === `2025-01-0${day}`);
+        expect(dayResults.length).toBe(3);
+      }
+    });
+
+    it('handles complete workflow with realistic data', () => {
+      const lines = [
+        // Day 1: /orders is most popular
+        '2025-01-01T00:00:00Z,u1,/api/orders,200,120',
+        '2025-01-01T01:00:00Z,u2,/api/orders,200,130',
+        '2025-01-01T02:00:00Z,u3,/api/orders,200,140',
+        '2025-01-01T03:00:00Z,u4,/api/users,200,100',
+        '2025-01-01T04:00:00Z,u5,/api/users,200,110',
+        // Day 2: /users is most popular
+        '2025-01-02T00:00:00Z,u6,/api/users,200,150',
+        '2025-01-02T01:00:00Z,u7,/api/users,200,160',
+        '2025-01-02T02:00:00Z,u8,/api/users,200,170',
+        '2025-01-02T03:00:00Z,u9,/api/orders,200,200',
+        // Broken line
+        'invalid,line,here',
+      ];
+
+      const result = aggregate(lines, {
+        from: '2025-01-01',
+        to: '2025-01-02',
+        tz: 'jst',
+        top: 2,
+      });
+
+      expect(result.length).toBe(4); // 2 dates × 2 paths
+
+      // Day 1: /api/orders (count=3, avg=130), /api/users (count=2, avg=105)
+      expect(result[0]).toMatchObject({
+        date: '2025-01-01',
+        path: '/api/orders',
+        count: 3,
+        avgLatency: 130,
+      });
+      expect(result[1]).toMatchObject({
+        date: '2025-01-01',
+        path: '/api/users',
+        count: 2,
+        avgLatency: 105,
+      });
+
+      // Day 2: /api/users (count=3, avg=160), /api/orders (count=1, avg=200)
+      expect(result[2]).toMatchObject({
+        date: '2025-01-02',
+        path: '/api/users',
+        count: 3,
+        avgLatency: 160,
+      });
+      expect(result[3]).toMatchObject({
+        date: '2025-01-02',
+        path: '/api/orders',
+        count: 1,
+        avgLatency: 200,
+      });
+    });
+  });
 });
