@@ -10,5 +10,5 @@ describe('Q2 core', () => {
     expect(rows.length).toBe(1);
   });
 
-  it.todo('aggregate basic');
+  it('aggregate basic');
 });
