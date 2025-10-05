@@ -27,41 +27,68 @@ export const aggregate = (lines: string[], opt: Options): Output => {
   const filtered = filterByDate(rows, opt.from, opt.to);
   const grouped = groupByDatePath(filtered, opt.tz);
   const ranked = rankTop(grouped, opt.top);
+
+  // 最終的なソート順：date ASC, count DESC, path ASC
+  ranked.sort((a, b) => {
+    if (a.date < b.date) return -1;
+    if (a.date > b.date) return 1;
+    if (a.count > b.count) return -1;
+    if (a.count < b.count) return 1;
+    if (a.path < b.path) return -1;
+    if (a.path > b.path) return 1;
+    return 0;
+  });
+
   return ranked;
 };
 
 export const parseLines = (lines: string[]): Row[] => {
   const out: Row[] = [];
-  for (const line of lines) {
-    const [timestamp, userId, path, status, latencyMs] = line.split(',');
-    if (!timestamp || !userId || !path || !status || !latencyMs) continue; // 壊れ行はスキップ
+  // ヘッダー行があればスキップ
+  const dataLines = lines[0]?.startsWith('timestamp,') ? lines.slice(1) : lines;
+
+  for (const line of dataLines) {
+    const [timestamp, userId, path, statusStr, latencyMsStr] = line.split(',');
+    if (!timestamp || !userId || !path || !statusStr || !latencyMsStr) continue; // カラムが不足している行はスキップ
+
+    const status = Number(statusStr);
+    const latencyMs = Number(latencyMsStr);
+
+    // statusまたはlatencyが数値でない場合はスキップ
+    if (isNaN(status) || isNaN(latencyMs)) continue;
+
     out.push({
       timestamp: timestamp.trim(),
       userId: userId.trim(),
       path: path.trim(),
-      status: Number(status),
-      latencyMs: Number(latencyMs),
+      status,
+      latencyMs,
     });
   }
   return out;
 };
 
 const filterByDate = (rows: Row[], from: string, to: string): Row[] => {
-  const fromT = Date.parse(from + 'T00:00:00Z');
-  const toT = Date.parse(to + 'T23:59:59Z');
+  const fromDate = new Date(from);
+  const toDate = new Date(to);
+  // 'to'の日付全体を含むように、toDateの時刻を日の終わりに設定
+  toDate.setUTCHours(23, 59, 59, 999);
+
   return rows.filter((r) => {
-    const t = Date.parse(r.timestamp);
-    return t >= fromT && t <= toT;
+    const rDate = new Date(r.timestamp);
+    return rDate >= fromDate && rDate <= toDate;
   });
 };
 
-const toTZDate = (utcIso: string, tz: TZ): string => {
-  const t = new Date(utcIso);
+const toTZDate = (t: string, tz: TZ): string => {
+  const dateObj = new Date(t);
   const offsetHours = tz === 'jst' ? 9 : 7; // JST=UTC+9, ICT=UTC+7
-  const local = new Date(t.getTime() + offsetHours * 60 * 60 * 1000);
-  const y = local.getUTCFullYear();
-  const m = (local.getUTCMonth() + 1).toString().padStart(2, '0');
-  const d = local.getUTCDate().toString().padStart(2, '0');
+  // オフセットを適用
+  dateObj.setUTCHours(dateObj.getUTCHours() + offsetHours);
+
+  const y = dateObj.getUTCFullYear();
+  const m = (dateObj.getUTCMonth() + 1).toString().padStart(2, '0');
+  const d = dateObj.getUTCDate().toString().padStart(2, '0');
   return `${y}-${m}-${d}`;
 };
 
@@ -69,7 +96,7 @@ const groupByDatePath = (rows: Row[], tz: TZ) => {
   const map = new Map<string, { sum: number; cnt: number }>();
   for (const r of rows) {
     const date = toTZDate(r.timestamp, tz);
-    const key = `${date}\u0000${r.path}`;
+    const key = `${date}\u0000${r.path}`; // 安全な区切り文字としてnull文字を使用
     const cur = map.get(key) || { sum: 0, cnt: 0 };
     cur.sum += r.latencyMs;
     cur.cnt += 1;
@@ -85,24 +112,27 @@ const rankTop = (
   items: { date: string; path: string; count: number; avgLatency: number }[],
   top: number
 ) => {
-  // 日付ごとに件数順で上位N
+  // アイテムを日付ごとにグループ化
   const byDate = new Map<string, typeof items>();
-  for (const it of items) {
-    const arr = byDate.get(it.date) || [];
-    arr.push(it);
-    byDate.set(it.date, arr);
+  for (const item of items) {
+    const dateItems = byDate.get(item.date) || [];
+    dateItems.push(item);
+    byDate.set(item.date, dateItems);
   }
-  const out: typeof items = [];
-  for (const [, arr] of byDate) {
-    arr.sort((a, b) => b.count - a.count || a.path.localeCompare(b.path));
-    out.push(...arr.slice(0, top));
+
+  const ranked: typeof items = [];
+  // 各日付に対してトップNを処理
+  for (const dateItems of byDate.values()) {
+    dateItems.sort((a, b) => {
+      // countの降順、次にpathの昇順でソート
+      if (b.count !== a.count) {
+        return b.count - a.count;
+      }
+      return a.path.localeCompare(b.path);
+    });
+    // トップNを取得して最終結果に追加
+    ranked.push(...dateItems.slice(0, top));
   }
-  // 安定した出力順: date ASC, count DESC
-  out.sort(
-    (a, b) =>
-      a.date.localeCompare(b.date) ||
-      b.count - a.count ||
-      a.path.localeCompare(b.path)
-  );
-  return out;
+  return ranked;
 };
+
