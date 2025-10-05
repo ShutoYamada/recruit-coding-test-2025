@@ -42,6 +42,7 @@ export const parseLines = (lines: string[]): Row[] => {
     if (!timestamp || !userId || !path || !status || !latencyMs) continue; // 壊れ行はスキップ
 
     if(!isValidTimestamp(timestamp)) continue;
+    if(!isValidUserId(userId)) continue;
 
     out.push({
       timestamp: timestamp.trim(),
@@ -79,6 +80,12 @@ const isValidTimestamp = (ts: string): boolean => {
     dt.getUTCMinutes() === minute &&
     dt.getUTCSeconds() === second
   );
+}
+
+function isValidUserId(s: string): boolean {
+  const result = s.match(/^[A-Za-z0-9._@-]+$/);
+  if(result) return true;
+  return false;
 }
 
 const filterByDate = (rows: Row[], from: string, to: string): Row[] => {
