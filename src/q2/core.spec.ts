@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseLines, filterByDate, toTZDate, groupByDatePath, rankTop } from './core.js';
+import { parseLines, filterByDate, toTZDate, groupByDatePath, rankTop, aggregate, type Options } from './core.js';
 
 /* eslint-disable max-lines-per-function */
 describe('Q2 core', () => {
@@ -98,5 +98,31 @@ describe('Q2 core', () => {
     ]);
   });
 
-  it.todo('aggregate basic');
+  // aggregate: full end-to-end integration
+  // すべてのステップを統合して最終結果を検証
+  it('aggregate basic: end-to-end the aggregation', () => {
+    const lines = [
+      '2025-01-01T23:00:00Z,u1,/a,200,100', 
+      '2025-01-02T00:30:00Z,u2,/a,200,300', 
+      '2025-01-02T01:00:00Z,u3,/b,200,200', 
+      '2025-01-03T02:00:00Z,u4,/a,200,400', 
+      '2025-02-01T00:00:00Z,u5,/a,200,500', 
+    ];
+
+    const opt: Options = {
+      from: '2025-01-01',
+      to: '2025-01-31',
+      tz: 'ict',
+      top: 2,
+    };
+
+    const result = aggregate(lines, opt);
+
+    expect(result).toEqual([
+      { date: '2025-01-02', path: '/a', count: 2, avgLatency: 200 },
+      { date: '2025-01-02', path: '/b', count: 1, avgLatency: 200 },
+      { date: '2025-01-03', path: '/a', count: 1, avgLatency: 400 },
+    ]);
+  });
+  // it.todo('aggregate basic');
 });
