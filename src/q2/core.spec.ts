@@ -10,6 +10,8 @@ describe('Q2 core', () => {
       '2025-01-03T10:12:00Z, u1 , /a ,200,100 ',
       'broken,row,only,three',
       '2025-01-03T10:13:00Z,u2,/b,200,200',
+      '2025-01-03T10:14:00Z,u3,/c,abc,100',
+      '2025-01-03T10:15:00Z,u4,/d,200,def',
     ]);
     expect(rows).toEqual([
       { timestamp: '2025-01-03T10:12:00Z', userId: 'u1', path: '/a', status: 200, latencyMs: 100 },
@@ -50,11 +52,14 @@ describe('Q2 core', () => {
       { timestamp: '2025-01-03T10:00:00Z', userId: 'u1', path: '/a', status: 200, latencyMs: 100 },
       { timestamp: '2025-01-03T10:00:00Z', userId: 'u2', path: '/a', status: 200, latencyMs: 200 },
       { timestamp: '2025-01-03T10:00:00Z', userId: 'u3', path: '/b', status: 200, latencyMs: 150 },
+      { timestamp: '2025-01-03T10:00:00Z', userId: 'u4', path: '/c', status: 200, latencyMs: 0 },
+      { timestamp: '2025-01-03T10:00:00Z', userId: 'u5', path: '/c', status: 200, latencyMs: 1 },
     ];
     const grouped = groupByDatePath(rows, 'jst');
     expect(grouped).toEqual([
       { date: '2025-01-03', path: '/a', count: 2, avgLatency: 150 },
       { date: '2025-01-03', path: '/b', count: 1, avgLatency: 150 },
+      { date: '2025-01-03', path: '/c', count: 2, avgLatency: 1 },
     ]);
   });
 
