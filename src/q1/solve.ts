@@ -173,7 +173,14 @@ const checkRating = (
  *  - J〜L は Child 不可
  */
 const checkSeat = (t: Ticket): boolean => {
-  // TODO ここを実装
+  // Child のみが座席制限対象
+  if (t.age === 'Child') {
+    // J, K, L 行は Child 不可
+    const restrictedRows = ['J', 'K', 'L'];
+    return !restrictedRows.includes(t.row);
+  }
+  
+  // Adult と Young はすべての座席利用可能
   return true;
 };
 
