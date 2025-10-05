@@ -25,21 +25,17 @@ dist
 coverage
 .nyc_output
 *.tsbuildinfo
-.eslintcache
 .cache
 .vite
 .parcel-cache
 .turbo
 tmp
 temp
-**/*.spec.ts
-**/*.test.ts
 
 
 # Dev/CI metadata not needed for build context
 .devcontainer
 .github
-.npmrc
 
 
 # Env files (keep example templates)
