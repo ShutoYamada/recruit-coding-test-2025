@@ -69,4 +69,22 @@ describe('Q2 core', () => {
       ];
       expect(result).toEqual(expectedOutput);
     });
+
+  it('parseLines: skips rows with non-numeric values', () => {
+
+    const sampleLines = [
+      '2025-01-15T10:00:00Z,u1,/api/ok,200,100',      // Correct line
+      '2025-01-15T10:01:00Z,u1,/api/bad,invalid,100', // Line with non-numeric status
+      '2025-01-15T10:02:00Z,u1,/api/slow,200,slow',     // Line with non-numeric latency
+    ];
+
+    // 2. Call parseLines function
+    const rows = parseLines(sampleLines);
+
+    // 3. Expected result: Only 1 valid row should be kept
+    expect(rows.length).toBe(1);
+    expect(rows[0].path).toBe('/api/ok');
+  });
+
+
 });

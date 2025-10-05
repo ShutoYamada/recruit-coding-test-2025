@@ -33,7 +33,14 @@ export const aggregate = (lines: string[], opt: Options): Output => {
 export const parseLines = (lines: string[]): Row[] => {
   const out: Row[] = [];
   for (const line of lines) {
-    const [timestamp, userId, path, status, latencyMs] = line.split(',');
+    const [timestamp, userId, path, statusStr, latencyMsStr] = line.split(',');
+    const status = Number(statusStr);
+    const latencyMs = Number(latencyMsStr);
+
+    // THÊM KIỂM TRA NÀY:
+    if (Number.isNaN(status) || Number.isNaN(latencyMs)) {
+      continue;
+    }
     if (!timestamp || !userId || !path || !status || !latencyMs) continue; // 壊れ行はスキップ
     out.push({
       timestamp: timestamp.trim(),

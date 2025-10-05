@@ -1,0 +1,5 @@
+timestamp,userId,path,status,latencyMs
+2025-01-20T10:00:00Z,u1,/api/ok,200,100
+2025-01-20T10:01:00Z,u1,/api/bad,invalid,100
+2025-01-20T10:02:00Z,u1,/api/slow,200,slow
+missing,columns
