@@ -43,6 +43,7 @@ export const parseLines = (lines: string[]): Row[] => {
 
     if(!isValidTimestamp(timestamp)) continue;
     if(!isValidUserId(userId)) continue;
+    if(!isValidPath(path)) continue;
     if(!isValidLatency(latencyMs)) continue;
 
     out.push({
@@ -83,22 +84,19 @@ const isValidTimestamp = (ts: string): boolean => {
   );
 }
 
-function isValidUserId(s: string): boolean {
+const isValidPath = (p: string): boolean => {
+  const PATH_RE = /^(?!.*\/\/)(?!.*\s)\/(?:[A-Za-z0-9._-]|%(?:[0-9A-Fa-f]{2})|\/)*$/;
+  if (typeof p !== "string" || p.length === 0) return false;
+  return PATH_RE.test(p);
+}
+
+const isValidUserId = (s: string): boolean => {
   const result = s.match(/^[A-Za-z0-9._@-]+$/);
   if(result) return true;
   return false;
 }
 
-const filterByDate = (rows: Row[], from: string, to: string): Row[] => {
-  const fromT = Date.parse(from + 'T00:00:00Z');
-  const toT = Date.parse(to + 'T23:59:59Z');
-  return rows.filter((r) => {
-    const t = Date.parse(r.timestamp);
-    return t >= fromT && t <= toT;
-  });
-};
-
-function isValidLatency(s: string): boolean {
+const isValidLatency = (s: string): boolean => {
   if (s.length === 0) return false;
 
   for (let i = 0; i < s.length; i++) {
@@ -109,6 +107,15 @@ function isValidLatency(s: string): boolean {
   const num = Number(s);
   return Number.isInteger(num) && num >= 0;
 }
+
+const filterByDate = (rows: Row[], from: string, to: string): Row[] => {
+  const fromT = Date.parse(from + 'T00:00:00Z');
+  const toT = Date.parse(to + 'T23:59:59Z');
+  return rows.filter((r) => {
+    const t = Date.parse(r.timestamp);
+    return t >= fromT && t <= toT;
+  });
+};
 
 const toTZDate = (utcIso: string, tz: TZ): string => {
   const t = new Date(utcIso);
