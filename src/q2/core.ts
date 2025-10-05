@@ -14,7 +14,7 @@ export type Options = {
   tz: TZ;
   top: number;
 };
-
+/**aggregate(): データ処理全体を集約する */
 export type Output = Array<{
   date: string; // tz での YYYY-MM-DD
   path: string;
@@ -24,37 +24,61 @@ export type Output = Array<{
 
 export const aggregate = (lines: string[], opt: Options): Output => {
   const rows = parseLines(lines);
-  const filtered = filterByDate(rows, opt.from, opt.to);
-  const grouped = groupByDatePath(filtered, opt.tz);
-  const ranked = rankTop(grouped, opt.top);
-  return ranked;
+  const grouped = groupByDatePath(rows, opt.tz);
+  // Lấy top N cho từng ngày, nhưng chỉ lấy các ngày trong khoảng from/to
+  const byDate = new Map<string, typeof grouped>();
+  for (const it of grouped) {
+    if (it.date >= opt.from && it.date <= opt.to) {
+      const arr = byDate.get(it.date) || [];
+      arr.push(it);
+      byDate.set(it.date, arr);
+    }
+  }
+  const out: typeof grouped = [];
+  for (const [date, arr] of byDate) {
+    arr.sort((a, b) => b.count - a.count || a.path.localeCompare(b.path));
+    out.push(...arr.slice(0, opt.top));
+  }
+  out.sort(
+    (a, b) =>
+      a.date.localeCompare(b.date) ||
+      b.count - a.count ||
+      a.path.localeCompare(b.path)
+  );
+  return out;
 };
 
+/**parseLines(): CSV の各行を読み込み、壊れた行をスキップする */
 export const parseLines = (lines: string[]): Row[] => {
   const out: Row[] = [];
   for (const line of lines) {
-    const [timestamp, userId, path, status, latencyMs] = line.split(',');
-    if (!timestamp || !userId || !path || !status || !latencyMs) continue; // 壊れ行はスキップ
+    if (!line.trim()) continue; //空行を安全にスキップする
+    const [timestamp, userId, path, statusStr, latencyMsStr] = line.split(',');
+    //列数を xác nhận
+    if (!timestamp || !userId || !path || !statusStr || !latencyMsStr) continue;
+
+    const status = Number(statusStr);
+    const latencyMs = Number(latencyMsStr);
+
+    // 数値でないステータスやレイテンシをスキップする
+    if (Number.isNaN(status) || Number.isNaN(latencyMs)) continue;
+
+    // 有効なISOタイムスタンプを確認する
+    if (isNaN(Date.parse(timestamp))) continue;
     out.push({
       timestamp: timestamp.trim(),
       userId: userId.trim(),
       path: path.trim(),
-      status: Number(status),
-      latencyMs: Number(latencyMs),
+      status,
+      latencyMs,
     });
   }
   return out;
 };
 
-const filterByDate = (rows: Row[], from: string, to: string): Row[] => {
-  const fromT = Date.parse(from + 'T00:00:00Z');
-  const toT = Date.parse(to + 'T23:59:59Z');
-  return rows.filter((r) => {
-    const t = Date.parse(r.timestamp);
-    return t >= fromT && t <= toT;
-  });
-};
+// filterByDate không còn cần thiết, đã filter theo local date trong aggregate
 
+/**toTZDate(): UTC ISO をローカル日付（JST または ICT）に変換する */
 const toTZDate = (utcIso: string, tz: TZ): string => {
   const t = new Date(utcIso);
   const offsetHours = tz === 'jst' ? 9 : 7; // JST=UTC+9, ICT=UTC+7
@@ -64,7 +88,7 @@ const toTZDate = (utcIso: string, tz: TZ): string => {
   const d = local.getUTCDate().toString().padStart(2, '0');
   return `${y}-${m}-${d}`;
 };
-
+ /**  groupByDatePath(): date と path ごとにグループ化する */
 const groupByDatePath = (rows: Row[], tz: TZ) => {
   const map = new Map<string, { sum: number; cnt: number }>();
   for (const r of rows) {
@@ -80,7 +104,11 @@ const groupByDatePath = (rows: Row[], tz: TZ) => {
     return { date, path, count: v.cnt, avgLatency: Math.round(v.sum / v.cnt) };
   });
 };
-
+/**
+ * 日付ごとに件数順で上位Nを抽出
+ * 同数は path 昇順
+ * 出力順は date ASC, count DESC, path ASC
+ */
 const rankTop = (
   items: { date: string; path: string; count: number; avgLatency: number }[],
   top: number
