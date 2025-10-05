@@ -105,6 +105,7 @@ export const solve = (input: string): string => {
  *  - 座席の列番号 1-24 の範囲チェック
  *  - その他フォーマットの揺れ（必要なら）
  */
+// eslint-disable-next-line complexity
 const parseLine = (line: string): Ticket | null => {
   const parts = line.split(',').map((s) => s.trim());
   if (parts.length !== 5) return null;
@@ -125,6 +126,18 @@ const parseLine = (line: string): Ticket | null => {
   const durM = parseInt(dur[2], 10);
   const row = seat[1].toUpperCase();
   const col = parseInt(seat[2], 10);
+
+  // 有効範囲のチェックを追加する
+  if (
+    startHH < 0 || startHH > 23 ||
+    startMM < 0 || startMM > 59 ||
+    durH < 0 ||
+    durM < 0 || durM > 59 ||
+    !'ABCDEFGHIJKL'.includes(row) ||
+    col < 1 || col > 24
+  ) {
+    return null;
+  }
 
   return {
     age: ageRaw as Age,
