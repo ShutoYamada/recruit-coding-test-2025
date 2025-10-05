@@ -30,6 +30,9 @@
 ```bash
 pnpm q2:run --file=src/q2/sample.csv --from=2025-01-01 --to=2025-01-31 --tz=jst --top=3
 ```
+```bash
+pnpm test run src/q2/core.spec.ts
+```
 
 ## テスト
 
@@ -56,6 +59,9 @@ pnpm q2:run --file=src/q2/sample.csv --from=2025-01-01 --to=2025-01-31 --tz=jst 
 ```bash
 docker run --rm -v "$PWD/src/q2:/data" recruit-assignments-2025 \
   --file=/data/sample.csv --from=2025-01-01 --to=2025-01-31 --tz=jst --top=3
+```
+```bash
+docker run --rm -v "%cd%\src\q2:/data" recruit-assignments-2025 --file=/data/sample.csv --from=2025-01-01 --to=2025-01-31 --tz=jst --top=3
 ```
 
 ## 採点基準
