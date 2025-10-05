@@ -134,6 +134,9 @@ const parseLine = (line: string): Ticket | null => {
   const row = seat[1].toUpperCase();
   const col = parseInt(seat[2], 10);
 
+  if (!validateRange(startHH, startMM, durH, durM, col)) return null;
+
+
   return {
     age: ageRaw as Age,
     rating: ratingRaw as Rating,
@@ -151,6 +154,35 @@ const calcEndMinutes = (t: Ticket): number => {
   const end = start + t.durH * 60 + t.durM;
   return end;
 };
+
+/**
+ * 値の範囲チェック / Range validation for time and seat
+ * - startHH: 0–23
+ * - startMM: 0–59
+ * - durH: >=0
+ * - durM: 0–59
+ * - col: 1–24
+ */
+const validateRange = (
+  startHH: number,
+  startMM: number,
+  durH: number,
+  durM: number,
+  col: number
+): boolean => {
+  switch (true) {
+    case ![startHH, startMM, durH, durM, col].every(Number.isInteger):
+    case startHH < 0 || startHH > 23:
+    case startMM < 0 || startMM > 59:
+    case durH < 0:
+    case durM < 0 || durM > 59:
+    case col < 1 || col > 24:
+      return false;
+    default:
+      return true;
+  }
+};
+
 
 /**
  * 年齢/レーティングの規則
