@@ -1,0 +1,9 @@
+# ビルドに不要なファイルやディレクトリを無視する
+node_modules
+dist
+.git
+.gitignore
+Dockerfile
+.dockerignore
+README.md
+
