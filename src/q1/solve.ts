@@ -63,7 +63,7 @@ export const solve = (input: string): string => {
   let anyNg = false;
 
   for (const t of tickets) {
-    const reasons: string[] = [];
+    const reasons: Reason[] = [];
 
     // 理由の push 順は README の順序に合わせておく（後で orderReasons で厳密化）
     if (!checkTimeRule(t, endMinutes, hasAdult, hasChild)) {
@@ -85,7 +85,12 @@ export const solve = (input: string): string => {
       evaluated.push({ ok: false, text: uniqueStable(ordered).join(',') });
     }
   }
-
+  if (anyNg) {
+  const errorLines = evaluated
+    .filter(e => !e.ok)
+    .map(e => e.text);
+  return errorLines.join('\n');
+}
   // TODO 「全体不可」のときは価格を出さず、NG行の理由だけを出力する
 
   return evaluated.map((e) => e.text).join('\n');
@@ -118,7 +123,12 @@ const parseLine = (line: string): Ticket | null => {
   const durM = parseInt(dur[2], 10);
   const row = seat[1].toUpperCase();
   const col = parseInt(seat[2], 10);
-
+  if (startHH > 23 || startMM > 59 || durM > 59) {
+    return null;
+  }
+  if (col < 1 || col > 24) {
+    return null;
+  }
   return {
     age: ageRaw as Age,
     rating: ratingRaw as Rating,
@@ -149,6 +159,8 @@ const checkRating = (
   hasAdultInSet: boolean
 ): boolean => {
   // TODO ここを実装
+  if (rating === 'R18+' && age !== "Adult") return false;
+  if (rating === 'PG-12' && age === "Child" && !hasAdultInSet) return false;
   return true;
 };
 
@@ -158,6 +170,9 @@ const checkRating = (
  */
 const checkSeat = (t: Ticket): boolean => {
   // TODO ここを実装
+  if (t.age === 'Child' &&  ['J', 'K', 'L'].includes(t.row)) {
+    return false;
+  }
   return true;
 };
 
@@ -175,15 +190,30 @@ const checkTimeRule = (
   hasChildInSet: boolean
 ): boolean => {
   // TODO ここを実装
+  if (hasAdultInSet) {return true;}
+  if (hasChildInSet && endMinutes > 960) { // 16:00 = 960分
+      return false;
+  }
+  if (t.age === 'Young' && endMinutes > 1080) { // 18:00 = 1080分
+      return false;
+    }
   return true;
 };
 
 /**
  * 理由の順序を安定化（README: 「同伴 → 年齢 → 座席」）
  */
-const orderReasons = (reasons: string[]): string[] => {
+type Reason = typeof MSG[keyof typeof MSG];
+const orderReasons = (reasons: Reason[]): Reason[] => {
   // TODO ここを実装
-  return reasons;
+  const correctOrder = [MSG.NEED_ADULT, MSG.AGE_LIMIT, MSG.SEAT_LIMIT];
+
+  const sortedReasons = [...reasons].sort((reasonA, reasonB) => {
+    const indexA = correctOrder.indexOf(reasonA);
+    const indexB = correctOrder.indexOf(reasonB);
+    return indexA - indexB;
+  });
+  return sortedReasons;
 };
 
 // 重複排除（stable）
