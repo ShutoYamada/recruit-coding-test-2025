@@ -191,6 +191,16 @@ const checkTimeRule = (
   hasChildInSet: boolean
 ): boolean => {
   // TODO ここを実装
+  // ★ 時間制限チェック：子供含み16時超→NG、若者のみ18時超→NG、大人あり→常にOK
+  if (hasAdultInSet) return true;
+
+  const MIN_16_00 = 16 * 60; // 960
+  const MIN_18_00 = 18 * 60; // 1080
+
+  if (hasChildInSet && endMinutes > MIN_16_00) return false;
+  if (!hasChildInSet && t.age === 'Young' && endMinutes > MIN_18_00)
+    return false;
+
   return true;
 };
 
