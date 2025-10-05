@@ -18,7 +18,7 @@ describe('Q1 solve', () => {
     expect(c).toBe('800円');
   });
 
-  it.skip('[C1] 全部OKの複数枚購入で価格が行ごとに出る', () => {
+  it('[C1] 全部OKの複数枚購入で価格が行ごとに出る', () => {
     const input = [
       'Adult,G,10:00,1:00,A-1',
       'Young,G,10:00,1:00,A-2',
