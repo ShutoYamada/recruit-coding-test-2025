@@ -1,3 +1,5 @@
+import { time } from "node:console";
+
 type TZ = 'jst' | 'ict';
 
 export type Row = {
@@ -39,6 +41,8 @@ export const parseLines = (lines: string[]): Row[] => {
     const [timestamp, userId, path, status, latencyMs] = parts.map((p) => p.trim());
     if (!timestamp || !userId || !path || !status || !latencyMs) continue; // 壊れ行はスキップ
 
+    if(!isValidTimestamp(timestamp)) continue;
+
     out.push({
       timestamp: timestamp.trim(),
       userId: userId.trim(),
@@ -49,6 +53,33 @@ export const parseLines = (lines: string[]): Row[] => {
   }
   return out;
 };
+
+const isValidTimestamp = (ts: string): boolean => {
+  if (ts.length !== 20) return false;
+  if (
+    ts[4] !== '-' || ts[7] !== '-' ||
+    ts[10] !== 'T' ||
+    ts[13] !== ':' || ts[16] !== ':' ||
+    ts[19] !== 'Z'
+  ) return false;
+
+  const year   = Number(ts.slice(0, 4));
+  const month  = Number(ts.slice(5, 7));
+  const day    = Number(ts.slice(8, 10));
+  const hour   = Number(ts.slice(11, 13));
+  const minute = Number(ts.slice(14, 16));
+  const second = Number(ts.slice(17, 19));
+  
+  const dt = new Date(ts);
+  return (
+    dt.getUTCFullYear() === year &&
+    dt.getUTCMonth() === month - 1 &&
+    dt.getUTCDate() === day &&
+    dt.getUTCHours() === hour &&
+    dt.getUTCMinutes() === minute &&
+    dt.getUTCSeconds() === second
+  );
+}
 
 const filterByDate = (rows: Row[], from: string, to: string): Row[] => {
   const fromT = Date.parse(from + 'T00:00:00Z');
