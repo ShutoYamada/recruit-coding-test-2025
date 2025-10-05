@@ -1,43 +1,59 @@
-import { createReadStream } from 'node:fs';
-import { argv, stdout } from 'node:process';
-import { createInterface } from 'node:readline';
-import { aggregate } from './core.js';
+// ==============================
+// Q2 CLI: 引数パース → aggregate → JSON 出力
+// ------------------------------
+// 依存ライブラリなしで --file/--from/--to/--tz/--top を簡易パース。
 
-const parseArgs = (): Record<string, string> => {
-  const args: Record<string, string> = {};
-  for (const a of argv.slice(2)) {
-    const m = a.match(/^--([^=]+)=(.*)$/);
-    if (m) args[m[1]] = m[2];
-  }
-  return args;
-};
+import { aggregate, Options, Tz } from './core.js';
 
-const main = async () => {
-  const args = parseArgs();
-  const file = args['file'];
-  if (!file) throw new Error('--file is required');
-  const from = args['from'] || '1970-01-01';
-  const to = args['to'] || '2100-12-31';
-  const tz = (args['tz'] || 'jst').toLowerCase();
-  const top = parseInt(args['top'] || '5', 10);
+function parseArgs(argv: string[]): Options {
+  const out: Partial<Options> = {};
 
-  // 逐次読み込み
-  const rl = createInterface({
-    input: createReadStream(file, { encoding: 'utf-8' }),
-    crlfDelay: Infinity,
-  });
+  // 次の引数の値を安全に取得
+  const getVal = (i: number) => {
+    const s = argv[i];
+    if (!s || s.startsWith('--')) throw new Error('値が必要です');
+    return s;
+  };
 
-  const rows: string[] = [];
-  for await (const line of rl) {
-    if (!line || /^\s*$/.test(line)) continue;
-    rows.push(line);
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a.startsWith('--file=')) out.filePath = a.slice(7);
+    else if (a === '--file') out.filePath = getVal(++i);
+    else if (a.startsWith('--from=')) out.from = a.slice(7);
+    else if (a === '--from') out.from = getVal(++i);
+    else if (a.startsWith('--to=')) out.to = a.slice(5);
+    else if (a === '--to') out.to = getVal(++i);
+    else if (a.startsWith('--tz=')) out.tz = a.slice(5) as Tz;
+    else if (a === '--tz') out.tz = getVal(++i) as Tz;
+    else if (a.startsWith('--top=')) out.top = Number(a.slice(6));
+    else if (a === '--top') out.top = Number(getVal(++i));
   }
 
-  const result = aggregate(rows, { from, to, tz: tz as never, top });
-  stdout.write(JSON.stringify(result) + '\n');
-};
+  // 必須・妥当性チェック
+  if (!out.filePath) throw new Error('`--file` は必須です');
+  if (!out.tz || (out.tz !== 'jst' && out.tz !== 'ict')) {
+    throw new Error('`--tz` は jst|ict のみ');
+  }
+  if (out.top !== undefined && (!Number.isFinite(out.top) || out.top! <= 0)) {
+    throw new Error('`--top` は正の数');
+  }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+  return out as Options;
+}
+
+async function main() {
+  try {
+    const opts = parseArgs(process.argv.slice(2));
+    const result = await aggregate(opts);
+    process.stdout.write(JSON.stringify(result, null, 2) + '\n');
+  } catch (e: unknown) {
+    // any を使わず unknown で受けて安全にメッセージを出す
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error(msg);
+    process.exitCode = 1;
+  }
+}
+
+// 直接実行時のみ起動
+void main();
+// ==============================
