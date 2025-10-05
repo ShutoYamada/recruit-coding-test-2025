@@ -86,5 +86,58 @@ describe('Q2 core', () => {
     expect(rows[0].path).toBe('/api/ok');
   });
 
+  it('should handle a comprehensive data set correctly', () => {
 
+
+    const sampleLines = [
+      //  03/01
+      '2025-01-03T10:12:00Z,u1,/api/orders,200,120',
+      '2025-01-03T10:13:00Z,u2,/api/orders,200,180', // -> count: 2, avg: 150
+      '2025-01-03T11:00:00Z,u3,/api/users,200,90',   // -> count: 1, avg: 90
+
+      // 2. 10/01
+      '2025-01-10T01:00:00Z,u1,/api/c,200,50',
+      '2025-01-10T02:00:00Z,u2,/api/c,200,60',
+      '2025-01-10T03:00:00Z,u3,/api/c,200,70',       // -> /api/c, count: 3
+      '2025-01-10T04:00:00Z,u4,/api/a,200,110',
+      '2025-01-10T05:00:00Z,u5,/api/a,200,130',      // -> /api/a, count: 2
+      '2025-01-10T06:00:00Z,u6,/api/b,200,200',
+      '2025-01-10T07:00:00Z,u7,/api/b,200,220',      // -> /api/b, count: 2 (out top 2)
+
+      // 3. 15/01 (transfer into 16/01 in JST)
+      '2025-01-15T17:00:00Z,u8,/api/reports,200,500', // -> date: 2025-01-16
+
+      // 4. error line
+      '2025-01-20T10:00:00Z,u9,/api/bad,invalid,100',
+      'missing,columns',
+
+      // 5. Out of range (February)
+      '2025-02-05T10:00:00Z,u11,/api/future,200,80',
+    ];
+
+    const options = {
+      from: '2025-01-01',
+      to: '2025-01-31',
+      tz: 'jst' as const,
+      top: 2,
+    };
+
+    const expectedOutput = [
+      // 03/01 first
+      { date: '2025-01-03', path: '/api/orders', count: 2, avgLatency: 150 },
+      { date: '2025-01-03', path: '/api/users', count: 1, avgLatency: 90 },
+
+      // 10/01 second, only top 2
+      // /api/c (count 3) first
+      { date: '2025-01-10', path: '/api/c', count: 3, avgLatency: 60 },
+      // /api/a (count 2) first
+      { date: '2025-01-10', path: '/api/a', count: 2, avgLatency: 120 },
+
+      // 16/01 (transfer into 16/01 in JST) last
+      { date: '2025-01-16', path: '/api/reports', count: 1, avgLatency: 500 },
+    ];
+
+    const result = aggregate(sampleLines, options);
+    expect(result).toEqual(expectedOutput);
+  });
 });
