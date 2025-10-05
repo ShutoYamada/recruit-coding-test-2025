@@ -175,3 +175,101 @@ describe('Q1 solve', () => {
     }
   });
 });
+
+//-------------------
+//-------私----------
+//-------------------
+const { solve } = require('./movieTicket'); // import hàm cần test
+
+describe('映画チケット判定ロジック', () => {
+
+  it('[C9] R18+ を Adult は購入可', () => {
+    const out = solve('Adult,R18+,10:00,1:00,A-1');
+    expect(out).toBe('1800円');
+  });
+
+  it('[C9] Child の K 行も購入不可（J/K/L 不可の網羅）', () => {
+    const out = solve('Child,G,10:00,1:00,K-5');
+    expect(out).toBe('対象のチケットではその座席をご利用いただけません');
+  });
+
+  it('[C9] 空入力は空文字を返す', () => {
+    expect(solve('')).toBe('');
+  });
+
+  it('[C9] 座席の行は小文字でも受理（Child の j 行は不可）', () => {
+    const out = solve('Child,G,10:00,1:00,j-1');
+    expect(out).toBe('対象のチケットではその座席をご利用いただけません');
+  });
+
+  it('[C9] PG-12 を Young は購入可', () => {
+    const out = solve('Young,PG-12,10:00,1:00,A-1');
+    expect(out).toBe('1200円');
+  });
+
+  it('[C9] Young/Adult は J/L 行でも購入可', () => {
+    const yj = solve('Young,G,10:00,1:00,J-5');
+    const yl = solve('Young,G,10:00,1:00,L-5');
+    const aj = solve('Adult,G,10:00,1:00,J-5');
+    const al = solve('Adult,G,10:00,1:00,L-5');
+    expect([yj, yl, aj, al]).toEqual(['1200円', '1200円', '1800円', '1800円']);
+  });
+
+  // ------------------------------
+  // [C10] 不正入力・フォーマット/範囲（ネガティブ確認）
+  // ------------------------------
+  it('[C10] 開始時刻の分が60は不正（例: 10:60）', () => {
+    const out = solve('Adult,G,10:60,1:00,A-1');
+    expect(out).toBe('不正な入力です');
+  });
+
+  it('[C10] 開始時刻の時が24は不正（24:00）', () => {
+    const out = solve('Adult,G,24:00,1:00,A-1');
+    expect(out).toBe('不正な入力です');
+  });
+
+  it('[C10] 上映時間の分が99は不正（0:99）', () => {
+    const out = solve('Adult,G,10:00,0:99,A-1');
+    expect(out).toBe('不正な入力です');
+  });
+
+  it('[C10] 上映時間の時間が負は不正（-1:00）', () => {
+    const out = solve('Adult,G,10:00,-1:00,A-1');
+    expect(out).toBe('不正な入力です');
+  });
+
+  it('[C10] 座席の列が範囲外（Z-1）は不正', () => {
+    const out = solve('Adult,G,10:00,1:00,Z-1');
+    expect(out).toBe('不正な入力です');
+  });
+
+  it('[C10] 座席の列番号が範囲外（A-99）は不正', () => {
+    const out = solve('Adult,G,10:00,1:00,A-99');
+    expect(out).toBe('不正な入力です');
+  });
+
+  it('[C10] レーティングが未知（X）は不正', () => {
+    const out = solve('Adult,X,10:00,1:00,A-1');
+    expect(out).toBe('不正な入力です');
+  });
+
+  it('[C10] レーティングが小文字（g）は不正（大文字固定）', () => {
+    const out = solve('Adult,g,10:00,1:00,A-1');
+    expect(out).toBe('不正な入力です');
+  });
+
+  it('[C10] カラム数過多（6カラム）は不正', () => {
+    const out = solve('Adult,G,10:00,1:00,A-1,extra');
+    expect(out).toBe('不正な入力です');
+  });
+
+  it('[C10] 余分な空白はトリムして許可（Adult,G,10:00,1:00,A-1）', () => {
+    const out = solve('  Adult  ,  G  ,  10:00  ,  1:00  ,  A-1  ');
+    expect(out).toBe('1800円');
+  });
+
+  it('[C10] 上映時間 0:00 は許可（境界ケース）', () => {
+    const out = solve('Adult,G,10:00,0:00,A-1');
+    expect(out).toBe('1800円');
+  });
+});
