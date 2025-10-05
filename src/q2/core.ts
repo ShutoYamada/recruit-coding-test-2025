@@ -9,68 +9,73 @@ export type Row = {
 };
 
 export type Options = {
-  from: string; // YYYY-MM-DD (UTC 起点)
-  to: string; // YYYY-MM-DD (UTC 起点)
+  from: string; // YYYY-MM-DD (UTC基点)
+  to: string; // YYYY-MM-DD (UTC基点)
   tz: TZ;
   top: number;
 };
 
 export type Output = Array<{
-  date: string; // tz での YYYY-MM-DD
+  date: string; // tz変換後 YYYY-MM-DD
   path: string;
   count: number;
   avgLatency: number;
 }>;
 
 export const aggregate = (lines: string[], opt: Options): Output => {
-  const rows = parseLines(lines);
+  // bỏ header nếu có
+  const contentLines = lines[0].startsWith('timestamp')
+    ? lines.slice(1)
+    : lines;
+  const rows = parseLines(contentLines);
   const filtered = filterByDate(rows, opt.from, opt.to);
   const grouped = groupByDatePath(filtered, opt.tz);
-  const ranked = rankTop(grouped, opt.top);
-  return ranked;
+  return rankTop(grouped, opt.top);
 };
 
 export const parseLines = (lines: string[]): Row[] => {
   const out: Row[] = [];
   for (const line of lines) {
-    const [timestamp, userId, path, status, latencyMs] = line.split(',');
-    if (!timestamp || !userId || !path || !status || !latencyMs) continue; // 壊れ行はスキップ
-    out.push({
-      timestamp: timestamp.trim(),
-      userId: userId.trim(),
-      path: path.trim(),
-      status: Number(status),
-      latencyMs: Number(latencyMs),
-    });
+    if (!line.trim()) continue;
+    const parts = line.split(',').map((x) => x.trim());
+    if (parts.length !== 5) continue;
+
+    const [timestamp, userId, path, statusStr, latencyStr] = parts;
+    if (!timestamp || !userId || !path || !statusStr || !latencyStr) continue;
+
+    const status = Number(statusStr);
+    const latencyMs = Number(latencyStr);
+
+    if (isNaN(status) || isNaN(latencyMs)) continue;
+    if (isNaN(new Date(timestamp).getTime())) continue;
+
+    out.push({ timestamp, userId, path, status, latencyMs });
   }
   return out;
 };
 
-const filterByDate = (rows: Row[], from: string, to: string): Row[] => {
+export const filterByDate = (rows: Row[], from: string, to: string): Row[] => {
   const fromT = Date.parse(from + 'T00:00:00Z');
-  const toT = Date.parse(to + 'T23:59:59Z');
+  const toT = Date.parse(to + 'T23:59:59.999Z');
   return rows.filter((r) => {
     const t = Date.parse(r.timestamp);
     return t >= fromT && t <= toT;
   });
 };
 
-const toTZDate = (utcIso: string, tz: TZ): string => {
-  const t = new Date(utcIso);
-  const offsetHours = tz === 'jst' ? 9 : 7; // JST=UTC+9, ICT=UTC+7
-  const local = new Date(t.getTime() + offsetHours * 60 * 60 * 1000);
-  const y = local.getUTCFullYear();
-  const m = (local.getUTCMonth() + 1).toString().padStart(2, '0');
-  const d = local.getUTCDate().toString().padStart(2, '0');
-  return `${y}-${m}-${d}`;
+export const toTZDate = (utcIso: string, tz: TZ): string => {
+  const offsetH = tz === 'jst' ? 9 : 7;
+  const d = new Date(utcIso);
+  const shifted = new Date(d.getTime() + offsetH * 3600 * 1000);
+  return shifted.toISOString().slice(0, 10);
 };
 
-const groupByDatePath = (rows: Row[], tz: TZ) => {
+export const groupByDatePath = (rows: Row[], tz: TZ) => {
   const map = new Map<string, { sum: number; cnt: number }>();
   for (const r of rows) {
     const date = toTZDate(r.timestamp, tz);
     const key = `${date}\u0000${r.path}`;
-    const cur = map.get(key) || { sum: 0, cnt: 0 };
+    const cur = map.get(key) ?? { sum: 0, cnt: 0 };
     cur.sum += r.latencyMs;
     cur.cnt += 1;
     map.set(key, cur);
@@ -81,23 +86,23 @@ const groupByDatePath = (rows: Row[], tz: TZ) => {
   });
 };
 
-const rankTop = (
+export const rankTop = (
   items: { date: string; path: string; count: number; avgLatency: number }[],
   top: number
 ) => {
-  // 日付ごとに件数順で上位N
   const byDate = new Map<string, typeof items>();
   for (const it of items) {
-    const arr = byDate.get(it.date) || [];
+    const arr = byDate.get(it.date) ?? [];
     arr.push(it);
     byDate.set(it.date, arr);
   }
+
   const out: typeof items = [];
-  for (const [, arr] of byDate) {
+  for (const arr of byDate.values()) {
     arr.sort((a, b) => b.count - a.count || a.path.localeCompare(b.path));
     out.push(...arr.slice(0, top));
   }
-  // 安定した出力順: date ASC, count DESC
+
   out.sort(
     (a, b) =>
       a.date.localeCompare(b.date) ||
