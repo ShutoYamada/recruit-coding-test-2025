@@ -31,27 +31,35 @@ export const aggregate = (lines: string[], opt: Options): Output => {
 };
 
 export const parseLines = (lines: string[]): Row[] => {
-  const out: Row[] = [];
-  for (const line of lines) {
-    const [timestamp, userId, path, status, latencyMs] = line.split(',');
-    if (!timestamp || !userId || !path || !status || !latencyMs) continue; // 壊れ行はスキップ
-    out.push({
-      timestamp: timestamp.trim(),
-      userId: userId.trim(),
-      path: path.trim(),
-      status: Number(status),
-      latencyMs: Number(latencyMs),
-    });
-  }
-  return out;
+  return lines.reduce<Row[]>((out, line) => {
+    const parts = line.split(',').map(s => s.trim());
+    if (parts.length !== 5) return out;
+
+    const [timestamp, userId, path, statusStr, latencyStr] = parts;
+    if (!timestamp || !userId || !path || !statusStr || !latencyStr) return out;
+
+    const tsNum = Date.parse(timestamp);
+    const status = Number(statusStr);
+    const latencyMs = Number(latencyStr);
+
+    if (!Number.isFinite(tsNum) || !Number.isFinite(status) || !Number.isFinite(latencyMs)) {
+      return out;
+    }
+
+    out.push({ timestamp, userId, path, status, latencyMs });
+    return out;
+  }, []);
 };
+
 
 const filterByDate = (rows: Row[], from: string, to: string): Row[] => {
   const fromT = Date.parse(from + 'T00:00:00Z');
-  const toT = Date.parse(to + 'T23:59:59Z');
+  const toStart = Date.parse(to + 'T00:00:00Z');
+  const oneDayMs = 24 * 60 * 60 * 1000;
+  const toExclusive = toStart + oneDayMs; 
   return rows.filter((r) => {
     const t = Date.parse(r.timestamp);
-    return t >= fromT && t <= toT;
+    return t >= fromT && t < toExclusive;
   });
 };
 
