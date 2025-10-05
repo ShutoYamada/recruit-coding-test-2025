@@ -94,7 +94,7 @@ export const groupByDatePath = (rows: Row[], tz: TZ) => {
   });
 };
 
-const rankTop = (
+export const rankTop = (
   items: { date: string; path: string; count: number; avgLatency: number }[],
   top: number
 ) => {

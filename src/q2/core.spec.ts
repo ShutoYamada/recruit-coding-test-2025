@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { parseLines, filterByDate, toTZDate, groupByDatePath } from './core.js';
+import { parseLines, filterByDate, toTZDate, groupByDatePath, rankTop } from './core.js';
 
+/* eslint-disable max-lines-per-function */
 describe('Q2 core', () => {
   // parseLines: skip invalid rows
   // 無効な行をスキップすること
@@ -75,6 +76,25 @@ describe('Q2 core', () => {
       { date: "2025-01-02", path: "/a", count: 2, avgLatency: 200 },
       { date: "2025-01-02", path: "/b", count: 1, avgLatency: 200 },
       { date: "2025-01-03", path: "/a", count: 1, avgLatency: 400 },
+    ]);
+  });
+
+  // rankTop: top N per date (by count desc, then path ASC)
+  // 各日付ごとにアクセス数上位N件を取得
+  it('rankTop: ranks top N by count, then path ASC when tie', () => {
+    const input = [
+      { date: '2025-01-01', path: '/a', count: 5, avgLatency: 100 },
+      { date: '2025-01-01', path: '/b', count: 3, avgLatency: 200 },
+      { date: '2025-01-01', path: '/c', count: 5, avgLatency: 150 },
+      { date: '2025-01-02', path: '/d', count: 2, avgLatency: 300 },
+      { date: '2025-01-02', path: '/e', count: 2, avgLatency: 250 },
+    ];
+    const ranked = rankTop(input, 2);
+    expect(ranked).toEqual([
+      { date: '2025-01-01', path: '/a', count: 5, avgLatency: 100 },
+      { date: '2025-01-01', path: '/c', count: 5, avgLatency: 150 },
+      { date: '2025-01-02', path: '/d', count: 2, avgLatency: 300 },
+      { date: '2025-01-02', path: '/e', count: 2, avgLatency: 250 },
     ]);
   });
 
