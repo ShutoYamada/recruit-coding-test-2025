@@ -1,6 +1,6 @@
 /* eslint-disable max-lines-per-function */
 import { describe, expect, it } from 'vitest';
-import { parseLines, toTZDate, aggregate } from './core.js';
+import { parseLines, aggregate } from './core.js';
 import { TZ, Options, Output } from './core.js';
 
 describe('Q2 core', () => {
@@ -142,27 +142,36 @@ describe('Q2 core', () => {
     expect(out.length).toBe(3);
   });
 
-  it('toTZDate: convert UTC→JST/ICT', () => {
+  it('aggregate: convert UTC→JST/ICT', () => {
     const input: [string, TZ][] = [
-      ['2025-01-01T00:00:00Z', 'jst'],
-      ['2025-01-01T00:30:00Z', 'jst'],
-      ['2025-01-01T12:30:00Z', 'jst'],
+      ['2025-01-01T00:10:00Z,u1,/api/users,200,120', 'jst'],
+      ['2025-01-01T00:30:00Z,u1,/api/users,200,120', 'jst'],
+      ['2025-01-01T12:30:00Z,u1,/api/users,200,120', 'jst'],
 
-      ['2025-01-01T15:00:00Z', 'jst'], // Boundary case
-      ['2025-01-01T23:30:00Z', 'jst'],
+      ['2025-01-01T15:00:00Z,u1,/api/users,200,120', 'jst'], // Boundary case
+      ['2025-01-01T23:30:00Z,u1,/api/users,200,120', 'jst'],
 
-      ['2025-01-01T15:00:00Z', 'ict'], 
-      ['2025-01-01T17:00:00Z', 'ict'], // Boundary case
+      ['2025-01-01T15:00:00Z,u1,/api/users,200,120', 'ict'], 
+      ['2025-01-01T17:00:00Z,u1,/api/users,200,120', 'ict'], // Boundary case
 
-      ['2025-01-31T23:00:00Z', 'ict'], // Crosses into February
-      ['2025-02-28T23:00:00Z', 'ict'], // Crosses into March, non-leap year
-      ['2024-02-29T23:00:00Z', 'ict'], // Crosses into March, leap year
-      ['2025-04-30T23:00:00Z', 'ict'], // Crosses into May
+      ['2025-01-31T23:00:00Z,u1,/api/users,200,120', 'ict'], // Crosses into February
+      ['2025-02-28T23:00:00Z,u1,/api/users,200,120', 'ict'], // Crosses into March, non-leap year
+      ['2024-02-29T23:00:00Z,u1,/api/users,200,120', 'ict'], // Crosses into March, leap year
+      ['2025-04-30T23:00:00Z,u1,/api/users,200,120', 'ict'], // Crosses into May
       
-      ['2025-12-31T23:00:00Z', 'ict'], // Crosses into next year
+      ['2025-12-31T23:00:00Z,u1,/api/users,200,120', 'ict'], // Crosses into next year
     ];
-    const out = input.map((i) => toTZDate(i[0], i[1]));
-    expect(out.join('\n')).toBe([
+
+    const out = input.map((i) => {
+      const options: Options = {
+        from: '2024-01-01',
+        to: '2025-12-31',
+        tz: i[1],
+        top: 100
+      }
+      return aggregate([i[0]], options)[0]['date'];
+    });
+    expect(out.join('\n')).toEqual([
       '2025-01-01',
       '2025-01-01',
       '2025-01-01',
