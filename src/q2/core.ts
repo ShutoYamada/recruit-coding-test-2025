@@ -10,7 +10,7 @@ export type Row = {
 
 export type Options = {
   from: string; // YYYY-MM-DD (UTC 起点)
-  to: string; // YYYY-MM-DD (UTC 起点)
+  to: string;   // YYYY-MM-DD (UTC 起点)
   tz: TZ;
   top: number;
 };
@@ -31,38 +31,31 @@ export const aggregate = (lines: string[], opt: Options): Output => {
 };
 
 export const parseLines = (lines: string[]): Row[] => {
-  return lines.reduce<Row[]>((out, line) => {
-    const parts = line.split(',').map(s => s.trim());
-    if (parts.length !== 5) return out;
-
-    const [timestamp, userId, path, statusStr, latencyStr] = parts;
-    if (!timestamp || !userId || !path || !statusStr || !latencyStr) return out;
-
-    const tsNum = Date.parse(timestamp);
+  const out: Row[] = [];
+  for (const line of lines) {
+    const cols = line.split(',');
+    if (cols.length < 5) continue;
+    const [timestamp, userId, path, statusStr, latencyStr] = cols.map(c => c.trim());
     const status = Number(statusStr);
     const latencyMs = Number(latencyStr);
-
-    if (!Number.isFinite(tsNum) || !Number.isFinite(status) || !Number.isFinite(latencyMs)) {
-      return out;
-    }
-
+    if (!timestamp || !userId || !path || Number.isNaN(status) || Number.isNaN(latencyMs)) continue;
     out.push({ timestamp, userId, path, status, latencyMs });
-    return out;
-  }, []);
+  }
+  return out;
 };
-
 
 const filterByDate = (rows: Row[], from: string, to: string): Row[] => {
   const fromT = Date.parse(from + 'T00:00:00Z');
-  const toStart = Date.parse(to + 'T00:00:00Z');
-  const oneDayMs = 24 * 60 * 60 * 1000;
-  const toExclusive = toStart + oneDayMs; 
-  return rows.filter((r) => {
+  const toT = Date.parse(to + 'T23:59:59Z');
+  return rows.filter(r => {
     const t = Date.parse(r.timestamp);
-    return t >= fromT && t < toExclusive;
+    return !Number.isNaN(t) && t >= fromT && t <= toT;
   });
 };
 
+/**
+ * UTC→JST/ICT変換後の日付(YYYY-MM-DD)を返す
+ */
 const toTZDate = (utcIso: string, tz: TZ): string => {
   const t = new Date(utcIso);
   const offsetHours = tz === 'jst' ? 9 : 7; // JST=UTC+9, ICT=UTC+7
@@ -93,19 +86,19 @@ const rankTop = (
   items: { date: string; path: string; count: number; avgLatency: number }[],
   top: number
 ) => {
-  // 日付ごとに件数順で上位N
   const byDate = new Map<string, typeof items>();
   for (const it of items) {
     const arr = byDate.get(it.date) || [];
     arr.push(it);
     byDate.set(it.date, arr);
   }
+
   const out: typeof items = [];
   for (const [, arr] of byDate) {
     arr.sort((a, b) => b.count - a.count || a.path.localeCompare(b.path));
     out.push(...arr.slice(0, top));
   }
-  // 安定した出力順: date ASC, count DESC
+
   out.sort(
     (a, b) =>
       a.date.localeCompare(b.date) ||
