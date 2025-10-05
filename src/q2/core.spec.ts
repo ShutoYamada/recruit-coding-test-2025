@@ -250,4 +250,123 @@ describe('Q2 core', () => {
       expect(result.find(r => r.date === '2025-01-02')).toBeTruthy();
     });
   });
+
+   // ========================================
+  // 5. Top N Ranking Tests - 日付ごとの上位N
+  // ========================================
+  describe('Top N ranking per date (日付ごとの上位N)', () => {
+    it('should return top N paths per date by count descending', () => {
+      const lines = [
+        // 2025-01-01: /a=3, /b=2, /c=1
+        '2025-01-01T00:00:00Z,u1,/a,200,100',
+        '2025-01-01T01:00:00Z,u1,/a,200,100',
+        '2025-01-01T02:00:00Z,u1,/a,200,100',
+        '2025-01-01T03:00:00Z,u1,/b,200,100',
+        '2025-01-01T04:00:00Z,u1,/b,200,100',
+        '2025-01-01T05:00:00Z,u1,/c,200,100',
+      ];
+      const opt: Options = { from: '2025-01-01', to: '2025-01-01', tz: 'jst', top: 2 };
+      const result = aggregate(lines, opt);
+
+      const jan1 = result.filter(r => r.date === '2025-01-01');
+      expect(jan1).toHaveLength(2);
+      expect(jan1[0].path).toBe('/a');
+      expect(jan1[1].path).toBe('/b');
+    });
+
+    it('should sort by path ASC when counts are equal', () => {
+      const lines = [
+        '2025-01-01T00:00:00Z,u1,/c,200,100',
+        '2025-01-01T01:00:00Z,u1,/a,200,100',
+        '2025-01-01T02:00:00Z,u1,/b,200,100',
+      ];
+      const opt: Options = { from: '2025-01-01', to: '2025-01-01', tz: 'jst', top: 3 };
+      const result = aggregate(lines, opt);
+
+      // all counts = 1 => path ascending: /a, /b, /c
+      expect(result[0].path).toBe('/a');
+      expect(result[1].path).toBe('/b');
+      expect(result[2].path).toBe('/c');
+    });
+
+    it('should apply top N separately for each date', () => {
+      const lines = [
+        // 2025-01-01: /a=3, /b=2
+        '2025-01-01T00:00:00Z,u1,/a,200,100',
+        '2025-01-01T01:00:00Z,u1,/a,200,100',
+        '2025-01-01T02:00:00Z,u1,/a,200,100',
+        '2025-01-01T03:00:00Z,u1,/b,200,100',
+        '2025-01-01T04:00:00Z,u1,/b,200,100',
+        // 2025-01-02: /x=2, /y=1
+        '2025-01-02T00:00:00Z,u1,/x,200,100',
+        '2025-01-02T01:00:00Z,u1,/x,200,100',
+        '2025-01-02T02:00:00Z,u1,/y,200,100',
+      ];
+      const opt: Options = { from: '2025-01-01', to: '2025-01-02', tz: 'jst', top: 1 };
+      const result = aggregate(lines, opt);
+
+      // top=1 per date => one entry for 2025-01-01 (/a) and one for 2025-01-02 (/x)
+      const jan1 = result.filter(r => r.date === '2025-01-01');
+      const jan2 = result.filter(r => r.date === '2025-01-02');
+
+      expect(jan1).toHaveLength(1);
+      expect(jan1[0].path).toBe('/a');
+
+      expect(jan2).toHaveLength(1);
+      expect(jan2[0].path).toBe('/x');
+    });
+  });
+
+  // ========================================
+  // 6. Final Output Sorting Tests - 決定的順序
+  // ========================================
+  describe('Final output sorting (最終出力の順序)', () => {
+    it('should sort by date ASC, count DESC, path ASC', () => {
+      const lines = [
+        // 2025-01-02: /b=2, /a=1
+        '2025-01-02T00:00:00Z,u1,/a,200,100',
+        '2025-01-02T01:00:00Z,u1,/b,200,100',
+        '2025-01-02T02:00:00Z,u1,/b,200,100',
+        // 2025-01-01: /z=3, /x=2, /y=2
+        '2025-01-01T00:00:00Z,u1,/z,200,100',
+        '2025-01-01T01:00:00Z,u1,/z,200,100',
+        '2025-01-01T02:00:00Z,u1,/z,200,100',
+        '2025-01-01T03:00:00Z,u1,/x,200,100',
+        '2025-01-01T04:00:00Z,u1,/x,200,100',
+        '2025-01-01T05:00:00Z,u1,/y,200,100',
+        '2025-01-01T06:00:00Z,u1,/y,200,100',
+      ];
+      const opt: Options = { from: '2025-01-01', to: '2025-01-02', tz: 'jst', top: 10 };
+      const result = aggregate(lines, opt);
+
+      // Expect deterministic ordering:
+      // 2025-01-01: /z(3), /x(2), /y(2) -> x and y both count=2 so path asc -> /x then /y
+      // 2025-01-02: /b(2), /a(1)
+      expect(result[0].date).toBe('2025-01-01');
+      expect(result[0].path).toBe('/z');
+      expect(result[1].date).toBe('2025-01-01');
+      expect(result[1].path).toBe('/x');
+      expect(result[2].date).toBe('2025-01-01');
+      expect(result[2].path).toBe('/y');
+      expect(result[3].date).toBe('2025-01-02');
+      expect(result[3].path).toBe('/b');
+      expect(result[4].date).toBe('2025-01-02');
+      expect(result[4].path).toBe('/a');
+    });
+
+    it('should be stable/deterministic across runs', () => {
+      const lines = [
+        '2025-01-01T00:00:00Z,u1,/a,200,100',
+        '2025-01-01T01:00:00Z,u1,/b,200,100',
+        '2025-01-01T02:00:00Z,u1,/c,200,100',
+      ];
+      const opt: Options = { from: '2025-01-01', to: '2025-01-01', tz: 'jst', top: 10 };
+
+      const r1 = aggregate(lines, opt);
+      const r2 = aggregate(lines, opt);
+
+      expect(r1).toEqual(r2);
+    });
+  });
+
 });
