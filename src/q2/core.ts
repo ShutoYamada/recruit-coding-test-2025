@@ -1,4 +1,4 @@
-export type TZ = 'jst' | 'ict';
+type TZ = 'jst' | 'ict';
 
 export type Row = {
   timestamp: string; // ISO8601 UTC
@@ -46,7 +46,7 @@ export const parseLines = (lines: string[]): Row[] => {
   return out;
 };
 
-export const filterByDate = (rows: Row[], from: string, to: string): Row[] => {
+const filterByDate = (rows: Row[], from: string, to: string): Row[] => {
   const fromT = Date.parse(from + 'T00:00:00Z');
   const toT = Date.parse(to + 'T23:59:59Z');
   return rows.filter((r) => {
@@ -55,7 +55,7 @@ export const filterByDate = (rows: Row[], from: string, to: string): Row[] => {
   });
 };
 
-export const toTZDate = (utcIso: string, tz: TZ): string => {
+const toTZDate = (utcIso: string, tz: TZ): string => {
   const t = new Date(utcIso);
   const offsetHours = tz === 'jst' ? 9 : 7; // JST=UTC+9, ICT=UTC+7
   const local = new Date(t.getTime() + offsetHours * 60 * 60 * 1000);

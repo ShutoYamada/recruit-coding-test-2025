@@ -1,7 +1,7 @@
 /* eslint-disable max-lines-per-function */
 import { describe, expect, it } from 'vitest';
 import { parseLines, aggregate } from './core.js';
-import { TZ, Options, Output } from './core.js';
+import { Options, Output } from './core.js';
 
 describe('Q2 core', () => {
   it('parseLines: skips broken rows', () => {
@@ -143,7 +143,7 @@ describe('Q2 core', () => {
   });
 
   it('aggregate: convert UTC→JST/ICT', () => {
-    const input: [string, TZ][] = [
+    const input: [string, 'jst' | 'ict'][] = [
       ['2025-01-01T00:10:00Z,u1,/api/users,200,120', 'jst'],
       ['2025-01-01T00:30:00Z,u1,/api/users,200,120', 'jst'],
       ['2025-01-01T12:30:00Z,u1,/api/users,200,120', 'jst'],
