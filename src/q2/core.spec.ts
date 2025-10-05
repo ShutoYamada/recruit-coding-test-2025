@@ -144,4 +144,110 @@ describe('Q2 core', () => {
     });
   });
 
+  // ========================================
+  // 3. Timezone Conversion Tests - UTC→JST/ICT変換
+  // ========================================
+  describe('Timezone conversion', () => {
+    it('should convert UTC to JST (+9) correctly and split days', () => {
+      const lines = [
+        '2025-01-01T14:00:00Z,u1,/a,200,100', // UTC14 -> JST23 (same day)
+        '2025-01-01T15:00:00Z,u1,/a,200,100', // UTC15 -> JST00 next day
+      ];
+      const opt: Options = { from: '2025-01-01', to: '2025-01-02', tz: 'jst', top: 10 };
+      const result = aggregate(lines, opt);
+
+      // Expect both dates (2025-01-01 and 2025-01-02) appear after tz conversion
+      expect(result.some(r => r.date === '2025-01-01')).toBe(true);
+      expect(result.some(r => r.date === '2025-01-02')).toBe(true);
+    });
+
+    it('should convert UTC to ICT (+7) correctly and split days', () => {
+      const lines = [
+        '2025-01-01T16:00:00Z,u1,/a,200,100', // UTC16 -> ICT23
+        '2025-01-01T17:00:00Z,u1,/a,200,100', // UTC17 -> ICT00 next day
+      ];
+      const opt: Options = { from: '2025-01-01', to: '2025-01-02', tz: 'ict', top: 10 };
+      const result = aggregate(lines, opt);
+
+      expect(result.some(r => r.date === '2025-01-01')).toBe(true);
+      expect(result.some(r => r.date === '2025-01-02')).toBe(true);
+    });
+
+    it('should handle exact boundary times around 15:00 UTC for JST mapping ', () => {
+      const lines = [
+        '2025-01-01T14:59:59Z,u1,/a,200,100', // JST: 2025-01-01 23:59:59
+        '2025-01-01T15:00:00Z,u1,/b,200,100', // JST: 2025-01-02 00:00:00
+      ];
+      const opt: Options = { from: '2025-01-01', to: '2025-01-02', tz: 'jst', top: 10 };
+      const result = aggregate(lines, opt);
+
+      const jan1 = result.filter(r => r.date === '2025-01-01');
+      const jan2 = result.filter(r => r.date === '2025-01-02');
+
+      expect(jan1.some(r => r.path === '/a')).toBe(true);
+      expect(jan2.some(r => r.path === '/b')).toBe(true);
+    });
+  });
+
+  // ========================================
+  // 4. Aggregation Tests - 集計の正確性
+  // ========================================
+  describe('Aggregation (集計)', () => {
+    it('should count requests correctly per date and path ', () => {
+      const lines = [
+        '2025-01-01T00:00:00Z,u1,/a,200,100',
+        '2025-01-01T01:00:00Z,u2,/a,200,200',
+        '2025-01-01T02:00:00Z,u3,/a,200,300',
+        '2025-01-01T03:00:00Z,u4,/b,200,400',
+      ];
+      const opt: Options = { from: '2025-01-01', to: '2025-01-01', tz: 'jst', top: 10 };
+      const result = aggregate(lines, opt);
+
+      const pa = result.find(r => r.path === '/a');
+      const pb = result.find(r => r.path === '/b');
+
+      expect(pa?.count).toBe(3);
+      expect(pb?.count).toBe(1);
+    });
+
+    it('should calculate average latency correctly and round', () => {
+      const lines = [
+        '2025-01-01T00:00:00Z,u1,/a,200,100',
+        '2025-01-01T01:00:00Z,u2,/a,200,200',
+        '2025-01-01T02:00:00Z,u3,/a,200,300', // avg = 200
+      ];
+      const opt: Options = { from: '2025-01-01', to: '2025-01-01', tz: 'jst', top: 10 };
+      const result = aggregate(lines, opt);
+
+      const pa = result.find(r => r.path === '/a');
+      expect(pa?.avgLatency).toBe(200);
+    });
+
+    it('should round .5 up (四捨五入) /', () => {
+      const lines = [
+        '2025-01-01T00:00:00Z,u1,/a,200,100',
+        '2025-01-01T01:00:00Z,u2,/a,200,151', // avg = 125.5 -> 126
+        '2025-01-01T02:00:00Z,u3,/b,200,100',
+        '2025-01-01T03:00:00Z,u4,/b,200,149', // avg = 124.5 -> 124 (rounded to 124? depends on Math.round)
+      ];
+      // Note: Math.round(124.5) === 125 in JS (round to nearest, .5 up)
+      const opt: Options = { from: '2025-01-01', to: '2025-01-01', tz: 'jst', top: 10 };
+      const result = aggregate(lines, opt);
+
+      const pa = result.find(r => r.path === '/a');
+      expect(pa?.avgLatency).toBe(Math.round((100 + 151) / 2)); // 251/2 = 125.5 -> 126
+    });
+
+    it('should aggregate separately for different dates', () => {
+      const lines = [
+        '2025-01-01T00:00:00Z,u1,/a,200,100',
+        '2025-01-02T00:00:00Z,u1,/a,200,200',
+      ];
+      const opt: Options = { from: '2025-01-01', to: '2025-01-02', tz: 'jst', top: 10 };
+      const result = aggregate(lines, opt);
+
+      expect(result.find(r => r.date === '2025-01-01')).toBeTruthy();
+      expect(result.find(r => r.date === '2025-01-02')).toBeTruthy();
+    });
+  });
 });
