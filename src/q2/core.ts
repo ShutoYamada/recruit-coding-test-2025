@@ -44,17 +44,7 @@ const isInvalidLine = (
   // 数値変換と検証 / Convert to number and validate
   const status = Number(statusStr);
   const latency = Number(latencyStr);
-  if (!Number.isFinite(status) || !Number.isFinite(latency)) return true;
-
-  // 異常な値チェック / Invalid value check
-  if (latency < 0 || latency > 10000 || status < 0) return true;
-
-  // 日付形式チェック / Date format check
-  const t = Date.parse(timestamp);
-  if (!Number.isFinite(t)) return true;
-
-  // パス形式チェック (/api/で始まる必要がある) / Path format check (must start with /api/)
-  if (!path.startsWith("/api/")) return true;
+  if (Number.isNaN(status) || Number.isNaN(latency)) return true;
 
   return false;
 };
@@ -65,7 +55,7 @@ export const parseLines = (lines: string[]): Row[] => {
 
   for (const line of lines) {
     // カンマで分割 / Split by comma
-    const parts = line.split(",").map((s) => s.trim());
+    const parts = line.split(',').map((s) => s.trim());
 
     // フィールド数チェック / Field count check
     if (parts.length !== 5) continue;
@@ -73,14 +63,14 @@ export const parseLines = (lines: string[]): Row[] => {
     const [timestamp, userId, path, statusStr, latencyStr] = parts;
 
     // ヘッダー行をスキップ / Skip header line
-    if (timestamp.toLowerCase() === "timestamp") continue;
+    if (timestamp.toLowerCase() === 'timestamp') continue;
 
-    // 行の妥当性を検証 / Validate line
+    // 行の妥当性を検証 (軽量チェック) / Validate line (light check)
     if (isInvalidLine(timestamp, userId, path, statusStr, latencyStr)) continue;
 
     // 正常な行を追加 / Add valid line to output
     out.push({
-      timestamp: new Date(Date.parse(timestamp)).toISOString(), // 正規化 / Normalize date
+      timestamp,
       userId,
       path,
       status: Number(statusStr),
