@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { parseLines, aggregate } from './core.js';
-import { Options, Output } from './core.js';
+import { Options, Output, toTZDate } from './core.js';
 
 describe('Q2 core', () => {
   it('parseLines: skips broken rows', () => {
@@ -437,6 +437,20 @@ describe('Q2 core', () => {
   });
 });
 
+const ONE_DAY_MS = 1000 * 60 * 60 * 24;
+
+const MIN_COUNT_NORMAL = 100;
+const MAX_COUNT_NORMAL = 500;
+const MIN_COUNT_HOTDATE = 1000;
+const MAX_COUNT_HOTDATE = 2500;
+
+const MIN_LATENCY_NORMAL = 60;
+const MAX_LATENCY_NORMAL = 120;
+const MIN_LATENCY_HOTDATE = 120;
+const MAX_LATENCY_HOTDATE = 500;
+
+const P_HOT_DATE = 0.6;
+
 /**
  * この関数はテスト用のサンプルデータ「expectOutput」を生成するための関数です。
  * データ生成ルール：
@@ -451,7 +465,39 @@ describe('Q2 core', () => {
  */
 const generateExpectOutput = (options: Options): Output => {
   const expectOutput: Output = [];
+  const utcFrom = toUTCDate(options.from, options.tz);
+  const utcTo = toUTCDate(options.to, options.tz);
+  for(const utcDate of ForeachDay(utcFrom, utcTo)) {
+    const pHotDate = Math.random();
+    const usedPaths = new Set<string>();
+    for (let i = 0; i < options.top; ++i) {
+      let path;
+      do {
+        path = `/api/${randomSuffix(3)}`;
+      } while (usedPaths.has(path));
+      usedPaths.add(path);
 
+      const isHot = pHotDate < P_HOT_DATE;
+      const count = Math.round(
+        isHot
+          ? MIN_COUNT_HOTDATE + Math.random() * (MAX_COUNT_HOTDATE - MIN_COUNT_HOTDATE)
+          : MIN_COUNT_NORMAL + Math.random() * (MAX_COUNT_NORMAL - MIN_COUNT_NORMAL)
+      );
+      const avgLatency = Math.round(
+        isHot
+          ? MIN_LATENCY_HOTDATE + Math.random() * (MAX_LATENCY_HOTDATE - MIN_LATENCY_HOTDATE)
+          : MIN_LATENCY_NORMAL + Math.random() * (MAX_LATENCY_NORMAL - MIN_LATENCY_NORMAL)
+      );
+
+      expectOutput.push({ date: toTZDate(utcDate, options.tz), path, count, avgLatency });
+    }
+  } 
+
+  expectOutput.sort((a, b) => {
+    if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+    if (a.count !== b.count) return b.count - a.count;
+    return a.path < b.path ? -1 : a.path > b.path ? 1 : 0;
+  });
   return expectOutput;
 };  
 
@@ -483,7 +529,45 @@ const generateExpectOutput = (options: Options): Output => {
 const generateInputFromExpect = (fromDate: string, toDate: string, 
   numOfRows: number, expectOutput: Output, options: Options): string[] => {
   const input: string[] = [];
-
+  
   return input;
 };
+
+/**
+ * [fromDate, toDate] の範囲内の各日付を (UTC) で反復処理します。
+ * @param fromDate YYYY-MM-DD 形式の日付 (開始日)
+ * @param toDate YYYY-MM-DD 形式の日付 (終了日)
+ * @yields 各日の Date オブジェクト (UTC)
+ */
+function* ForeachDay(fromDate: string, toDate: string) {
+  const from = new Date(fromDate).getTime();
+  const to = new Date(toDate).getTime();
+  const totalDays = (to - from) / ONE_DAY_MS + 1;
+  for(let d = 0; d < totalDays; ++d) {
+    const dt = new Date(from + ONE_DAY_MS * d);
+    const y = dt.getUTCFullYear();
+    const m = String(dt.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(dt.getUTCDate()).padStart(2, '0');
+    yield `${y}-${m}-${day}`;
+  }
+}
+
+const toUTCDate = (localTime: string, tz: "jst" | "ict"): string => {
+  const t = new Date(localTime);
+  const offsetHours = tz === 'jst' ? 9 : 7; // JST=UTC+9, ICT=UTC+7
+  const local = new Date(t.getTime() - offsetHours * 60 * 60 * 1000);
+  const y = local.getUTCFullYear();
+  const m = (local.getUTCMonth() + 1).toString().padStart(2, '0');
+  const d = local.getUTCDate().toString().padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+const randomSuffix = (length: number): string => {
+  const chars = 'abcdefghijklmnopqrstuvwxyz';
+  let s = '';
+  for (let i = 0; i < length; i++) {
+    s += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return s;
+}
 
