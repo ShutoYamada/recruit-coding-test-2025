@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseLines, filterByDate } from './core.js';
+import { parseLines, filterByDate, toTZDate } from './core.js';
 
 describe('Q2 core', () => {
   // parseLines: skip invalid rows
@@ -33,6 +33,31 @@ describe('Q2 core', () => {
     expect(filtered.length).toBe(3);
     expect(filtered[0].userId).toBe('u2');
     expect(filtered[2].userId).toBe('u4');
+  });
+
+  // toTZDate: convert UTC → JST/ICT
+  // UTC日時をタイムゾーンに変換する
+  it('toTZDate: converts UTC to local date', () => {
+    const input = [
+      '2025-01-01T15:00:00Z', 
+      '2025-01-01T16:00:00Z', 
+      '2025-01-02T14:59:59Z', 
+      '2025-01-02T15:00:00Z', 
+    ];
+    const jst = input.map((t) => toTZDate(t, 'jst'));
+    const ict = input.map((t) => toTZDate(t, 'ict'));
+    expect(jst).toEqual([
+      '2025-01-02',
+      '2025-01-02',
+      '2025-01-02',
+      '2025-01-03',
+    ]);
+    expect(ict).toEqual([
+      '2025-01-01',
+      '2025-01-01',
+      '2025-01-02',
+      '2025-01-02',
+    ]);
   });
 
   it.todo('aggregate basic');
