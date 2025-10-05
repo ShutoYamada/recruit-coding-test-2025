@@ -149,6 +149,16 @@ const checkRating = (
   hasAdultInSet: boolean
 ): boolean => {
   // TODO ここを実装
+  if (rating === 'G') return true;
+  if (rating === 'PG-12') {
+    // 子供はグループに大人（Adult）がいる場合にのみ購入可能です。
+    if (age === 'Child' && !hasAdultInSet) return false;
+    return true;
+  }
+  if (rating === 'R18+') {
+    // 大人（Adult）のみが購入を許可されています。
+    return age === 'Adult';
+  }
   return true;
 };
 
