@@ -30,19 +30,38 @@ export const aggregate = (lines: string[], opt: Options): Output => {
   return ranked;
 };
 
+/**
+ * CSV行をパース。壊れた行（カラム不足や非数値）はスキップ
+ */
 export const parseLines = (lines: string[]): Row[] => {
   const out: Row[] = [];
+
   for (const line of lines) {
-    const [timestamp, userId, path, status, latencyMs] = line.split(',');
-    if (!timestamp || !userId || !path || !status || !latencyMs) continue; // 壊れ行はスキップ
+    const parts = line.split(',');
+
+    // 最低5カラム必要
+    if (parts.length < 5) continue;
+
+    const [timestamp, userId, path, statusStr, latencyStr] = parts;
+
+    // 必須フィールドの存在チェック
+    if (!timestamp || !userId || !path || !statusStr || !latencyStr) continue;
+
+    const status = Number(statusStr.trim());
+    const latencyMs = Number(latencyStr.trim());
+
+    // 数値変換が失敗した場合はスキップ (NaN チェック)
+    if (isNaN(status) || isNaN(latencyMs)) continue;
+
     out.push({
       timestamp: timestamp.trim(),
       userId: userId.trim(),
       path: path.trim(),
-      status: Number(status),
-      latencyMs: Number(latencyMs),
+      status,
+      latencyMs,
     });
   }
+
   return out;
 };
 
