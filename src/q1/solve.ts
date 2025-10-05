@@ -179,7 +179,7 @@ const checkSeat = (t: Ticket): boolean => {
     const restrictedRows = ['J', 'K', 'L'];
     return !restrictedRows.includes(t.row);
   }
-  
+
   // Adult と Young はすべての座席利用可能
   return true;
 };
@@ -197,7 +197,25 @@ const checkTimeRule = (
   hasAdultInSet: boolean,
   hasChildInSet: boolean
 ): boolean => {
-  // TODO ここを実装
+  // Adult がいれば常にOK
+  if (hasAdultInSet) return true;
+
+  // Adult が 0 の場合の制限
+  // Child を含むグループで終了が 16:00 を超える場合、全員 NG
+  if (hasChildInSet && endMinutes > 16 * 60) {
+    return false;
+  }
+
+  // Young 個別の制限：終了が 18:00 を超える場合 NG
+  if (t.age === 'Young' && endMinutes > 18 * 60) {
+    return false;
+  }
+
+  // Child 個別の制限：終了が 16:00 を超える場合 NG
+  if (t.age === 'Child' && endMinutes > 16 * 60) {
+    return false;
+  }
+
   return true;
 };
 
