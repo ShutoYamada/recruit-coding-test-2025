@@ -3,7 +3,7 @@ FROM node:lts-slim AS builder
 WORKDIR /app
 RUN corepack enable
 COPY package.json pnpm-lock.yaml* ./
-RUN pnpm install --no-frozen-lockfile
+RUN pnpm install --frozen-lockfile
 COPY tsconfig.json ./
 COPY src ./src
 RUN pnpm build
