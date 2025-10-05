@@ -472,10 +472,8 @@ const generateExpectOutput = (options: Options): Output => {
   // Add one day to handle cases where converting from UTC to ICT/JST causes the date to shift forward by one day.
   const [y, m, d] = options.to.split('-').map(Number);
   const date = new Date(Date.UTC(y, m - 1, d + 1));
-  const tzTo = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}
-  -${String(date.getUTCDate()).padStart(2, '0')}`;
+  const tzTo = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`;
 
-  console.log(date, tzTo);
   for(const date of ForeachDay(options.from, tzTo)) {
     const pHotDate = Math.random();
     const usedPaths = new Set<string>();
