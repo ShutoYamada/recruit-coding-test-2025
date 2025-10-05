@@ -54,8 +54,7 @@ pnpm q2:run --file=src/q2/sample.csv --from=2025-01-01 --to=2025-01-31 --tz=jst 
 - 実行例：
 
 ```bash
-docker run --rm -v "$PWD/src/q2:/data" recruit-assignments-2025 \
-  --file=/data/sample.csv --from=2025-01-01 --to=2025-01-31 --tz=jst --top=3
+docker run --rm -v "$PWD/src/q2:/data" recruit-assignments-2025 node dist/q2/main.js --file=/data/sample.csv --tz=jst --from=2025-01-01 --to=2025-01-31 --top=3
 ```
 
 ## 採点基準
