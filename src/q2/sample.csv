@@ -1,5 +1,50 @@
-timestamp,userId,path,status,latencyMs
-2025-01-03T10:12:00Z,u1,/api/orders,200,120
-2025-01-03T10:13:00Z,u2,/api/orders,200,180
-2025-01-03T11:00:00Z,u3,/api/users,200,90
-2025-01-04T00:10:00Z,u1,/api/orders,200,110
+2025-01-03T12:00:00Z,u9,/api/orders,200,145
+2025-01-03T12:05:00Z,u9,/api/orders, ,150
+2025-01-03T12:10:00Z,u10,/api/users,200,0
+2025-01-03T12:15:00Z,u11,/api/users,200,-5
+2025-01-03T12:20:00Z,u12,/api/products,xxx,123
+2025-01-03T12:25:00Z,u12,/api/products,200,abc
+2025-01-04T08:00:00Z,u1,/api/login,200,75
+2025-01-04T08:00:00Z,u1,/api/login,200,75  # duplicate full line
+2025-01-04T08:05:00Z,u2,/api/login,401,200
+2025-01-04T08:10:00Z,u3,/api/logout,200,65
+2025-01-04T08:15:00Z,u4,/api/payments,200,220
+2025-01-04T08:20:00Z,u4,/api/payments,500,500
+2025-01-04T08:25:00Z,u5,/api/payments,200, 180
+2025-01-05T09:00:00Z,u6,/api/orders,200,115
+2025-01-05T09:05:00Z,u6,/api/orders,200,115,EXTRA
+2025-01-05T09:10:00Z,u6,/api/orders,,115
+2025-01-05T09:15:00Z,u7,/api/orders,200,
+2025-01-05T09:20:00Z,u7,/api/orders,200,99999
+2025-01-05T09:25:00Z,u7,/api/orders,200,1e2
+2025-01-06T10:00:00Z,u8,/api/products,200,150
+2025-01-06T10:10:00Z, ,/api/products,200,155
+2025-01-06T10:15:00Z,u9,,200,160
+2025-01-06T10:20:00Z,u9,api/products,200,160
+2025-01-06 10:25:00,u9,/api/products,200,165
+2025-01-07T00:00:00+09:00,u10,/api/orders,200,140
+2025-01-07T00:05:00Z,u10,/api/orders,200,140
+2025-01-07T00:05:00Z,u10,/api/orders,200,140 # trailing comment
+2025-01-07T00:10:00Z,u10,/api/users,200,95
+2025-01-07T00:15:00Z,u10,/api/users,404,150
+2025-01-08T11:00:00Z,u1,/api/dashboard,200,70
+2025-01-08T11:05:00Z,u2,/api/dashboard,200,72
+2025-01-08T11:10:00Z,u3,/api/dashboard,200,85
+2025-01-08T11:15:00Z,u4,/api/dashboard,200,NaN
+2025-01-08T11:20:00Z,u5,/api/dashboard,200,Infinity
+2025-01-09T23:59:59Z,u6,/api/orders,200,130
+2025-01-10T00:00:00Z,u6,/api/orders,200,131
+2025-01-10T00:05:00Z,u6,/api/orders,200,132
+2025-01-10T00:10:00Z,u6,/api/orders,200,133
+2025-01-10T00:15:00Z,u6,/api/orders,200,134
+2025-01-10T00:25:00Z,u6,/api/orders,200,136
+2025-01-10T00:30:00Z,u6,/api/orders,200,137
+2025-01-10T00:35:00Z,u6,/api/orders,200,138
+2025-01-10T00:40:00Z,u6,/api/orders,200,139
+2025-01-11T13:00:00Z,u7,/api/users,200,100
+2025-01-11T13:05:00Z,u7,/api/users,200, 105 
+2025-01-11T13:10:00Z,u7,/api/users,200, ninety
+2025-01-12T14:00:00Z,u8,/api/products,200,150
+2025-01-12T14:05:00Z,u8,/api/products,200,151
+2025-01-12T14:10:00Z,u8,/api/products,200,152
+2025-03-01T00:00:00Z,u9,/api/orders,200,120

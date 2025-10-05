@@ -31,30 +31,30 @@ export const aggregate = (lines: string[], opt: Options): Output => {
 };
 
 export const parseLines = (lines: string[]): Row[] => {
-  const out: Row[] = [];
+  const out: Row[] = []; //khởi tạo mảng kết quả
   for (const line of lines) {
     const parts = line.split(',').map((s) => s.trim());
     if (parts.length < 5) continue;
 
     const [timestamp, userId, path, statusStr, latencyStr] = parts;
 
-    // ヘッダー行をスキップ
+    // ヘッダー行をスキップ / Skip the header row
     if (timestamp.toLowerCase() === 'timestamp') continue;
 
-    // 空チェック
+    // 空チェック / check null
     if (!timestamp || !userId || !path || !statusStr || !latencyStr) continue;
 
-    // 数値チェック
+    // 数値チェック / number check
     const status = Number(statusStr);
     const latencyMs = Number(latencyStr);
     if (!Number.isFinite(status) || !Number.isFinite(latencyMs)) continue;
 
-    // 日付チェック
+    // 日付チェック / date check
     const t = Date.parse(timestamp);
     if (!Number.isFinite(t)) continue;
 
     out.push({
-      timestamp: new Date(t).toISOString(), // 正規化
+      timestamp: new Date(t).toISOString(), // 正規化 / normalization(chuẩn hóa)
       userId,
       path,
       status,
