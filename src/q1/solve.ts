@@ -238,8 +238,10 @@ const checkTimeRule = (
  * 理由の順序を安定化（README: 「同伴 → 年齢 → 座席」）
  */
 const orderReasons = (reasons: string[]): string[] => {
-  // TODO ここを実装
-  return reasons;
+  //理由の順序を安定化
+  const order = [MSG.NEED_ADULT, MSG.AGE_LIMIT, MSG.SEAT_LIMIT];
+
+  return order.filter((msg) => reasons.includes(msg));
 };
 
 // 重複排除（stable）
