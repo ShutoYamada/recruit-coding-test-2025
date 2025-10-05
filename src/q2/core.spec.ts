@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseLines } from './core.js';
+import { parseLines, aggregate } from './core.js';
 
 describe('Q2 core', () => {
   it('parseLines: skips broken rows', () => {
@@ -19,5 +19,44 @@ describe('Q2 core', () => {
     expect(rows[1].userId).toBe('u7');
   });
 
-  it.todo('aggregate basic');
+  it('aggregate basic functionality', () => {
+    const lines = [
+      'timestamp,userId,path,status,latencyMs', // header行
+      '2025-01-03T10:12:00Z,u1,/api/orders,200,120',
+      '2025-01-03T10:13:00Z,u2,/api/orders,200,180',
+      '2025-01-03T11:00:00Z,u3,/api/users,200,90',
+      '2025-01-04T00:10:00Z,u1,/api/orders,200,110',
+    ];
+
+    const result = aggregate(lines, {
+      from: '2025-01-03',
+      to: '2025-01-04',
+      tz: 'jst',
+      top: 5,
+    });
+
+    expect(result).toHaveLength(3);
+    // JST で 2025-01-03: /api/orders (count=2, avg=(120+180)/2=150), /api/users (count=1, avg=90)
+    // JST で 2025-01-04: /api/orders (count=1, avg=110)
+
+    // 結果の順序確認: date ASC, count DESC, path ASC
+    expect(result[0]).toEqual({
+      date: '2025-01-03',
+      path: '/api/orders',
+      count: 2,
+      avgLatency: 150,
+    });
+    expect(result[1]).toEqual({
+      date: '2025-01-03',
+      path: '/api/users',
+      count: 1,
+      avgLatency: 90,
+    });
+    expect(result[2]).toEqual({
+      date: '2025-01-04',
+      path: '/api/orders',
+      count: 1,
+      avgLatency: 110,
+    });
+  });
 });
