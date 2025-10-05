@@ -86,7 +86,12 @@ export const solve = (input: string): string => {
     }
   }
 
-  // TODO 「全体不可」のときは価格を出さず、NG行の理由だけを出力する
+  // If any ticket in the set is NG, the whole set is considered "not allowed":
+  // output only the NG rows' reason texts (preserve input order). Otherwise
+  // output the prices for each row.
+  if (anyNg) {
+    return evaluated.filter((e) => !e.ok).map((e) => e.text).join('\n');
+  }
 
   return evaluated.map((e) => e.text).join('\n');
 };
@@ -118,6 +123,12 @@ const parseLine = (line: string): Ticket | null => {
   const durM = parseInt(dur[2], 10);
   const row = seat[1].toUpperCase();
   const col = parseInt(seat[2], 10);
+  
+  // Range validations
+  if (Number.isNaN(startHH) || Number.isNaN(startMM) || startHH < 0 || startHH > 23 || startMM < 0 || startMM > 59) return null;
+  if (Number.isNaN(durH) || Number.isNaN(durM) || durH < 0 || durM < 0 || durM > 59) return null;
+  if (Number.isNaN(col) || col < 1 || col > 24) return null;
+  if (!/^[A-L]$/.test(row)) return null;
 
   return {
     age: ageRaw as Age,
@@ -148,7 +159,20 @@ const checkRating = (
   rating: Rating,
   hasAdultInSet: boolean
 ): boolean => {
-  // TODO ここを実装
+  // G: anyone
+  if (rating === 'G') return true;
+
+  // R18+: only Adult
+  if (rating === 'R18+') {
+    return age === 'Adult';
+  }
+
+  // PG-12: Child requires an accompanying Adult in the same set
+  if (rating === 'PG-12') {
+    if (age === 'Child' && !hasAdultInSet) return false;
+    return true;
+  }
+
   return true;
 };
 
@@ -157,7 +181,10 @@ const checkRating = (
  *  - J〜L は Child 不可
  */
 const checkSeat = (t: Ticket): boolean => {
-  // TODO ここを実装
+  // Rows J-L (J,K,L) are not allowed for Child
+  if (t.age === 'Child') {
+    if (t.row >= 'J' && t.row <= 'L') return false;
+  }
   return true;
 };
 
@@ -174,7 +201,32 @@ const checkTimeRule = (
   hasAdultInSet: boolean,
   hasChildInSet: boolean
 ): boolean => {
-  // TODO ここを実装
+  // If there's any Adult in the set, time restrictions do not apply
+  if (hasAdultInSet) return true;
+
+  const END_CHILD_LIMIT = 16 * 60; // 16:00
+  const END_YOUNG_LIMIT = 18 * 60; // 18:00
+
+  // If the set contains a Child and there is no Adult, and the movie ends after 16:00,
+  // then Child and Young both require adult accompaniment (i.e., are not allowed).
+  if (!hasAdultInSet && hasChildInSet) {
+    if (endMinutes > END_CHILD_LIMIT) {
+      // any non-Adult (Young/Child) is not allowed
+      return t.age === 'Adult';
+    }
+  }
+
+  // No Adult and no Child in set: only Young may be subject to 18:00 limit
+  if (!hasAdultInSet) {
+    if (t.age === 'Child') {
+      // Child alone requires adult if end > 16:00
+      return endMinutes <= END_CHILD_LIMIT;
+    }
+    if (t.age === 'Young') {
+      return endMinutes <= END_YOUNG_LIMIT;
+    }
+  }
+
   return true;
 };
 
@@ -182,8 +234,11 @@ const checkTimeRule = (
  * 理由の順序を安定化（README: 「同伴 → 年齢 → 座席」）
  */
 const orderReasons = (reasons: string[]): string[] => {
-  // TODO ここを実装
-  return reasons;
+  const order = [MSG.NEED_ADULT, MSG.AGE_LIMIT, MSG.SEAT_LIMIT] as const;
+  const sorted = reasons
+    .slice()
+    .sort((a, b) => order.indexOf(a as typeof order[number]) - order.indexOf(b as typeof order[number]));
+  return sorted;
 };
 
 // 重複排除（stable）
