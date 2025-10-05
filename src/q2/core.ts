@@ -33,8 +33,12 @@ export const aggregate = (lines: string[], opt: Options): Output => {
 export const parseLines = (lines: string[]): Row[] => {
   const out: Row[] = [];
   for (const line of lines) {
-    const [timestamp, userId, path, status, latencyMs] = line.split(',');
+    const parts = line.split(',');
+    if (parts.length !== 5) continue;
+
+    const [timestamp, userId, path, status, latencyMs] = parts.map((p) => p.trim());
     if (!timestamp || !userId || !path || !status || !latencyMs) continue; // 壊れ行はスキップ
+
     out.push({
       timestamp: timestamp.trim(),
       userId: userId.trim(),
