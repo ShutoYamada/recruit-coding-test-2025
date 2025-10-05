@@ -96,4 +96,52 @@ describe('Q2 core', () => {
       expect(result.every(r => r.path !== '/e')).toBe(true); // after range
     });
   });
+
+
+  // 3. タイムゾーン：UTC→JST/ICT の変換で日付跨ぎが正しい
+  describe('timezone conversion', () => {
+    it('converts UTC to JST correctly with date boundary crossing', () => {
+      const lines = [
+        '2025-01-01T14:00:00Z,u1,/a,200,100', // 23:00 JST (same day)
+        '2025-01-01T15:00:00Z,u2,/a,200,150', // 00:00 JST next day
+        '2025-01-01T16:00:00Z,u3,/a,200,200', // 01:00 JST next day
+      ];
+      const result = aggregate(lines, {
+        from: '2025-01-01',
+        to: '2025-01-02',
+        tz: 'jst',
+        top: 10,
+      });
+
+      const jan01 = result.find(r => r.date === '2025-01-01');
+      const jan02 = result.find(r => r.date === '2025-01-02');
+
+      expect(jan01).toBeDefined();
+      expect(jan01?.count).toBe(1); // only 14:00 UTC
+      expect(jan02).toBeDefined();
+      expect(jan02?.count).toBe(2); // 15:00 and 16:00 UTC
+    });
+
+    it('converts UTC to ICT correctly with date boundary crossing', () => {
+      const lines = [
+        '2025-01-01T16:00:00Z,u1,/b,200,100', // 23:00 ICT (same day)
+        '2025-01-01T17:00:00Z,u2,/b,200,150', // 00:00 ICT next day
+        '2025-01-01T18:00:00Z,u3,/b,200,200', // 01:00 ICT next day
+      ];
+      const result = aggregate(lines, {
+        from: '2025-01-01',
+        to: '2025-01-02',
+        tz: 'ict',
+        top: 10,
+      });
+
+      const jan01 = result.find(r => r.date === '2025-01-01');
+      const jan02 = result.find(r => r.date === '2025-01-02');
+
+      expect(jan01).toBeDefined();
+      expect(jan01?.count).toBe(1);
+      expect(jan02).toBeDefined();
+      expect(jan02?.count).toBe(2);
+    });
+  });
 });
