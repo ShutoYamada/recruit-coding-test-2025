@@ -33,15 +33,19 @@ export const aggregate = (lines: string[], opt: Options): Output => {
 export const parseLines = (lines: string[]): Row[] => {
   const out: Row[] = [];
   for (const line of lines) {
-    const [timestamp, userId, path, status, latencyMs] = line.split(',');
-    if (!timestamp || !userId || !path || !status || !latencyMs) continue; // 壊れ行はスキップ
-    out.push({
-      timestamp: timestamp.trim(),
-      userId: userId.trim(),
-      path: path.trim(),
-      status: Number(status),
-      latencyMs: Number(latencyMs),
-    });
+    const parts = line.split(',');
+    if (parts.length < 5) continue; // skip broken/short lines
+    const [timestampRaw, userIdRaw, pathRaw, statusRaw, latencyRaw] = parts;
+    if (!timestampRaw || !userIdRaw || !pathRaw || !statusRaw || !latencyRaw) continue;
+    const timestamp = timestampRaw.trim();
+    const userId = userIdRaw.trim();
+    const path = pathRaw.trim();
+    const status = Number(statusRaw);
+    const latencyMs = Number(latencyRaw);
+    // validate timestamp and numeric fields; skip header-like or malformed lines
+    if (Number.isNaN(Date.parse(timestamp))) continue;
+    if (!Number.isFinite(status) || !Number.isFinite(latencyMs)) continue;
+    out.push({ timestamp, userId, path, status, latencyMs });
   }
   return out;
 };
