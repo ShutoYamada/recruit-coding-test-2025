@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-
 export type Age = 'Adult' | 'Young' | 'Child';
 export type Rating = 'G' | 'PG-12' | 'R18+';
 
